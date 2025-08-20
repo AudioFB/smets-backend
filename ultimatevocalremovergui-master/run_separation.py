@@ -1,11 +1,11 @@
 # run_separation.py
 import os
 import argparse
-# --- CORREÇÃO: Trocando wget por requests ---
 import requests
 import uuid
 from argparse import Namespace
 import torch
+# --- CORREÇÃO AQUI ---
 from demucs.hdemucs import HDemucs 
 
 # --- Adicionar esta linha para resolver o erro do PyTorch ---
@@ -49,9 +49,8 @@ def main():
     print(f"Método: {args.process_method}")
     print(f"Baixando áudio de: {args.audio_url}")
 
-    # --- CORREÇÃO: Lógica de download usando a biblioteca requests ---
+    # --- Baixar o arquivo de áudio com User-Agent de navegador ---
     job_id = str(uuid.uuid4())
-    # O nome do arquivo será temporário, já que não sabemos a extensão original
     input_path = os.path.join(INPUT_FOLDER, f"{job_id}_audio_input") 
     
     try:
