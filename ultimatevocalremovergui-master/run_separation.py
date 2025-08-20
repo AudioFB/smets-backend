@@ -1,7 +1,8 @@
 # run_separation.py
 import os
 import argparse
-import wget
+# --- CORREÇÃO: Trocando wget por requests ---
+import requests
 import uuid
 from argparse import Namespace
 import torch
@@ -48,15 +49,18 @@ def main():
     print(f"Método: {args.process_method}")
     print(f"Baixando áudio de: {args.audio_url}")
 
-    # --- CORREÇÃO AQUI: Baixar o arquivo de áudio com User-Agent de navegador ---
+    # --- CORREÇÃO: Lógica de download usando a biblioteca requests ---
     job_id = str(uuid.uuid4())
-    # O nome do arquivo será determinado pelo wget a partir da URL
+    # O nome do arquivo será temporário, já que não sabemos a extensão original
     input_path = os.path.join(INPUT_FOLDER, f"{job_id}_audio_input") 
     
     try:
-        # Simula um navegador para evitar bloqueios (erro 404/403)
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
-        wget.download(args.audio_url, out=input_path, headers=headers)
+        with requests.get(args.audio_url, headers=headers, stream=True) as r:
+            r.raise_for_status()
+            with open(input_path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=8192): 
+                    f.write(chunk)
         print("\nDownload do áudio concluído.")
     except Exception as e:
         print(f"\nErro ao baixar o áudio: {e}")
