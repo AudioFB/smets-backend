@@ -5,10 +5,11 @@ import wget
 import uuid
 from argparse import Namespace
 import torch
-from demucs import hdemucs
+# --- CORREÇÃO AQUI ---
+from demucs.hdemucs import HTDemucs 
 
 # --- Adicionar esta linha para resolver o erro do PyTorch ---
-torch.serialization.add_safe_globals([htdemucs.HTDemucs])
+torch.serialization.add_safe_globals([HTDemucs])
 
 # Importa as classes de separação que você já tem
 from separate import SeperateDemucs, SeperateMDX, SeperateMDXC
