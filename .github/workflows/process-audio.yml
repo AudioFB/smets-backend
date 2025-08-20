@@ -36,20 +36,25 @@ jobs:
         with:
           python-version: '3.9' # Usando uma versão comum de Python
 
-      # Passo 3: Instalar todas as dependências do requirements.txt
-      - name: 3. Instalar dependências Python
+      - name: 3. Instalar dependências do sistema (libsndfile)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsndfile1
+
+      # O passo de instalar dependências Python agora será o 4
+      - name: 4. Instalar dependências Python
         run: |
           python -m pip install --upgrade pip
           pip install -r ultimatevocalremovergui-master/requirements.txt
 
       # Passo 4: Criar as pastas onde os modelos ficarão
-      - name: 4. Criar diretórios para os modelos
+      - name: 5. Criar diretórios para os modelos
         run: |
           mkdir -p ultimatevocalremovergui-master/models/Demucs_Models/v3_v4_repo
           mkdir -p ultimatevocalremovergui-master/models/MDX_Net_Models
 
       # Passo 5: Baixar os modelos do nosso Release do GitHub
-      - name: 5. Baixar modelos do Release
+      - name: 6. Baixar modelos do Release
         env:
           GH_TOKEN: ${{ github.token }} # Token de autenticação automático do GitHub
         run: |
@@ -63,7 +68,7 @@ jobs:
           mv temp_models/*.yaml ultimatevocalremovergui-master/models/Demucs_Models/v3_v4_repo/
 
       # Passo 6: Executar o nosso script de separação de áudio
-      - name: 6. Executar separação de áudio
+      - name: 7. Executar separação de áudio
         run: |
           python ultimatevocalremovergui-master/run_separation.py \
             --model-name "${{ github.event.inputs.model_name }}" \
@@ -72,7 +77,7 @@ jobs:
       
       # Passo 7: Fazer o upload dos resultados como um "artefato"
       # Artefatos são arquivos que podemos baixar após a conclusão do workflow
-      - name: 7. Fazer upload dos resultados
+      - name: 8. Fazer upload dos resultados
         uses: actions/upload-artifact@v4
         with:
           name: arquivos-separados-${{ github.run_id }} # Nome único para o artefato
