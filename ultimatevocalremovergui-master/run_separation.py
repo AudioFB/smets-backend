@@ -4,6 +4,11 @@ import argparse
 import wget
 import uuid
 from argparse import Namespace
+import torch
+from demucs import hdemucs
+
+# --- Adicionar esta linha para resolver o erro do PyTorch ---
+torch.serialization.add_safe_globals([htdemucs.HTDemucs])
 
 # Importa as classes de separação que você já tem
 from separate import SeperateDemucs, SeperateMDX, SeperateMDXC
@@ -100,7 +105,7 @@ def main():
         else:
             params['demucs_stem_count'], params['demucs_source_map'] = 2, DEMUCS_2_SOURCE_MAPPER
 
-    # --- CORREÇÃO: Bloco completo de atributos padrão restaurado ---
+    # --- Bloco completo de atributos padrão restaurado ---
     model_data = Namespace(
         **{
             **dict(
