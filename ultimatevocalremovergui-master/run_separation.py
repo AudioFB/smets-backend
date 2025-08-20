@@ -5,7 +5,6 @@ import wget
 import uuid
 from argparse import Namespace
 import torch
-# --- CORREÇÃO AQUI ---
 from demucs.hdemucs import HDemucs 
 
 # --- Adicionar esta linha para resolver o erro do PyTorch ---
@@ -49,13 +48,15 @@ def main():
     print(f"Método: {args.process_method}")
     print(f"Baixando áudio de: {args.audio_url}")
 
-    # --- Baixar o arquivo de áudio ---
+    # --- CORREÇÃO AQUI: Baixar o arquivo de áudio com User-Agent de navegador ---
     job_id = str(uuid.uuid4())
-    input_filename = f"{job_id}.wav" 
-    input_path = os.path.join(INPUT_FOLDER, input_filename)
+    # O nome do arquivo será determinado pelo wget a partir da URL
+    input_path = os.path.join(INPUT_FOLDER, f"{job_id}_audio_input") 
     
     try:
-        wget.download(args.audio_url, input_path)
+        # Simula um navegador para evitar bloqueios (erro 404/403)
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
+        wget.download(args.audio_url, out=input_path, headers=headers)
         print("\nDownload do áudio concluído.")
     except Exception as e:
         print(f"\nErro ao baixar o áudio: {e}")
