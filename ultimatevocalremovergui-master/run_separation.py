@@ -6,16 +6,16 @@ import uuid
 from argparse import Namespace
 import torch
 # --- CORREÇÃO AQUI ---
-from demucs.hdemucs import HTDemucs 
+from demucs.hdemucs import HDemucs 
 
 # --- Adicionar esta linha para resolver o erro do PyTorch ---
-torch.serialization.add_safe_globals([HTDemucs])
+torch.serialization.add_safe_globals([HDemucs])
 
 # Importa as classes de separação que você já tem
 from separate import SeperateDemucs, SeperateMDX, SeperateMDXC
 from lib_v5.vr_network.model_param_init import ModelParameters
 
-# --- DEFINIÇÃO DE CONSTANTES (Muitas são do seu api.py original) ---
+# --- DEFINIÇÃO DE CONSTANTES ---
 DEMUCS_ARCH_TYPE = 'Demucs'
 MDX_ARCH_TYPE = 'MDX-Net'
 DEMUCS_V4 = 'v4'
