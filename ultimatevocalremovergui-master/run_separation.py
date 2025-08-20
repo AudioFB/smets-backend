@@ -5,11 +5,12 @@ import requests
 import uuid
 from argparse import Namespace
 import torch
-# --- CORREÇÃO AQUI ---
-from demucs.hdemucs import HDemucs 
 
-# --- Adicionar esta linha para resolver o erro do PyTorch ---
-torch.serialization.add_safe_globals([HDemucs])
+# --- CORREÇÃO FINAL AQUI ---
+# O erro do Pytorch era literal. O modelo foi salvo com uma classe chamada HTDemucs.
+# Nós importamos a classe real (HDemucs) mas precisamos autorizar o nome antigo.
+from demucs.hdemucs import HDemucs as HTDemucs # Importamos HDemucs mas damos o apelido HTDemucs
+torch.serialization.add_safe_globals([HTDemucs]) # Autorizamos o nome que o Pytorch espera
 
 # Importa as classes de separação que você já tem
 from separate import SeperateDemucs, SeperateMDX, SeperateMDXC
@@ -49,7 +50,7 @@ def main():
     print(f"Método: {args.process_method}")
     print(f"Baixando áudio de: {args.audio_url}")
 
-    # --- Baixar o arquivo de áudio com User-Agent de navegador ---
+    # --- Lógica de download usando a biblioteca requests ---
     job_id = str(uuid.uuid4())
     input_path = os.path.join(INPUT_FOLDER, f"{job_id}_audio_input") 
     
