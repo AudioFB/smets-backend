@@ -3,16 +3,15 @@ import os
 import argparse
 import requests
 import uuid
-import hashlib
 import json
+import hashlib
 from argparse import Namespace
 import torch
-from demucs.hdemucs import HDemucs as HTDemucs 
+from demucs.hdemucs import HDemucs as HTDemucs
 
 torch.serialization.add_safe_globals([HTDemucs])
 
 from separate import SeperateDemucs, SeperateMDX, SeperateMDXC
-from lib_v5.vr_network.model_param_init import ModelParameters
 
 # --- DEFINIÇÃO DE CONSTANTES ---
 DEMUCS_ARCH_TYPE = 'Demucs'
@@ -32,28 +31,24 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_FOLDER = os.path.join(BASE_DIR, 'models')
 INPUT_FOLDER = os.path.join(BASE_DIR, 'inputs')
 OUTPUT_FOLDER = os.path.join(BASE_DIR, 'outputs')
-MDX_HASH_DIR = os.path.join(MODELS_FOLDER, 'MDX_Net_Models', 'model_data')
 
 os.makedirs(INPUT_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
-# --- Nova Função para obter hash e carregar parâmetros ---
+# --- Novas Funções (Adaptadas do seu api.py) ---
 def get_model_hash(model_path):
     try:
         with open(model_path, 'rb') as f:
-            f.seek(- 10000 * 1024, 2)
-            model_hash = hashlib.md5(f.read()).hexdigest()
+            f.seek(-10000 * 1024, 2)
+            return hashlib.md5(f.read()).hexdigest()
     except:
-        model_hash = hashlib.md5(open(model_path,'rb').read()).hexdigest()
-    return model_hash
+        return hashlib.md5(open(model_path, 'rb').read()).hexdigest()
 
-def get_mdx_model_params(model_path):
-    model_hash = get_model_hash(model_path)
-    json_path = os.path.join(MDX_HASH_DIR, f"{model_hash}.json")
-    if os.path.exists(json_path):
-        with open(json_path, 'r') as f:
-            return json.load(f)
-    return {}
+MDX_HASH_JSON = os.path.join(MODELS_FOLDER, 'MDX_Net_Models', 'model_data', 'model_data.json')
+MDX_MODEL_PARAMS = {}
+if os.path.exists(MDX_HASH_JSON):
+    with open(MDX_HASH_JSON, 'r') as f:
+        MDX_MODEL_PARAMS = json.load(f)
 
 def main():
     parser = argparse.ArgumentParser(description='Separa faixas de áudio usando modelos UVR.')
@@ -83,56 +78,44 @@ def main():
         return
 
     process_data = {
-        'audio_file': input_path,
-        'audio_file_base': os.path.splitext(os.path.basename(input_path))[0],
-        'export_path': OUTPUT_FOLDER,
-        'set_progress_bar': lambda *args, **kwargs: None, 
-        'write_to_console': lambda text, base_text="": print(text),
-        'process_iteration': lambda: None,
+        'audio_file': input_path, 'audio_file_base': os.path.splitext(os.path.basename(input_path))[0],
+        'export_path': OUTPUT_FOLDER, 'set_progress_bar': lambda *args, **kwargs: None, 
+        'write_to_console': lambda text, base_text="": print(text), 'process_iteration': lambda: None,
         'cached_source_callback': lambda *args, **kwargs: (None, None),
         'cached_model_source_holder': lambda *args, **kwargs: None,
-        'is_ensemble_master': False,
-        'is_4_stem_ensemble': False,
-        'list_all_models': []
+        'is_ensemble_master': False, 'is_4_stem_ensemble': False, 'list_all_models': []
     }
 
     params = {}
     model_path = ""
     
     if args.process_method == MDX_ARCH_TYPE:
-        model_folder = os.path.join(MODELS_FOLDER, 'MDX_Net_Models')
-        model_filename_onnx = os.path.join(model_folder, f'{args.model_name}.onnx')
-        model_filename_ckpt = os.path.join(model_folder, f'{args.model_name}.ckpt')
-
-        if os.path.exists(model_filename_onnx):
-            model_path = model_filename_onnx
+        onnx_path = os.path.join(MODELS_FOLDER, 'MDX_Net_Models', f'{args.model_name}.onnx')
+        ckpt_path = os.path.join(MODELS_FOLDER, 'MDX_Net_Models', f'{args.model_name}.ckpt')
+        if os.path.exists(onnx_path):
+            model_path = onnx_path
             params['is_mdx_ckpt'] = False
-        elif os.path.exists(model_filename_ckpt):
-            model_path = model_filename_ckpt
+        elif os.path.exists(ckpt_path):
+            model_path = ckpt_path
             params['is_mdx_ckpt'] = True
         else:
             print(f"Modelo MDX-Net não encontrado: {args.model_name}")
             return
-            
-        # --- CORREÇÃO AQUI: Carregar os parâmetros do JSON ---
-        model_json_params = get_mdx_model_params(model_path)
-        if model_json_params:
-            params['compensate'] = model_json_params.get('compensate', 1.035)
-            params['mdx_dim_f_set'] = model_json_params.get('mdx_dim_f_set')
-            params['mdx_dim_t_set'] = model_json_params.get('mdx_dim_t_set')
-            params['mdx_n_fft_scale_set'] = model_json_params.get('mdx_n_fft_scale_set')
-            params['primary_stem'] = model_json_params.get('primary_stem', VOCAL_STEM)
-        else:
-            print(f"Aviso: Parâmetros para o modelo {args.model_name} não encontrados. Usando valores padrão.")
-            params['primary_stem'] = VOCAL_STEM
-
+        
+        model_hash = get_model_hash(model_path)
+        model_params_json = MDX_MODEL_PARAMS.get(model_hash, {})
+        params['compensate'] = model_params_json.get('compensate', 1.035)
+        params['mdx_dim_f_set'] = model_params_json.get('mdx_dim_f_set')
+        params['mdx_dim_t_set'] = model_params_json.get('mdx_dim_t_set')
+        params['mdx_n_fft_scale_set'] = model_params_json.get('mdx_n_fft_scale_set')
+        params['primary_stem'] = model_params_json.get('primary_stem', VOCAL_STEM)
 
     elif args.process_method == DEMUCS_ARCH_TYPE:
         model_path = os.path.join(MODELS_FOLDER, 'Demucs_Models', 'v3_v4_repo', f'{args.model_name}.yaml')
         if not os.path.exists(model_path):
              model_path = os.path.join(MODELS_FOLDER, 'Demucs_Models', f'{args.model_name}.ckpt')
 
-        if '6s' in args.model_name: # Lógica para 6 stems, se necessário
+        if '6s' in args.model_name:
              params['demucs_stem_count'] = 6
         elif '4s' in args.model_name:
             params['demucs_stem_count'] = 4
