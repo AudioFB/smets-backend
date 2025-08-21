@@ -20,7 +20,6 @@ on:
 jobs:
   process-audio:
     runs-on: ubuntu-latest
-    # --- NOVA IMPLEMENTAÇÃO: TEMPO LIMITE DE 15 MINUTOS ---
     timeout-minutes: 15
 
     steps:
@@ -32,7 +31,7 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: 3. Configurar cache de dependências Python
+      - name: 3. Configurar cache de dependências Python (Pip)
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
@@ -40,33 +39,47 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: 4. Instalar dependências do sistema
+      # --- OTIMIZAÇÃO: NOVO PASSO PARA CACHE DOS MODELOS ---
+      - name: 4. Configurar cache dos modelos de IA
+        id: cache-models # Adicionamos um ID para referenciar este passo depois
+        uses: actions/cache@v4
+        with:
+          path: ultimatevocalremovergui-master/models
+          # A chave do cache é baseada no nome da release. Se você criar uma nova release 
+          # (ex: v1.0.1-models), o cache será invalidado e os modelos serão baixados novamente.
+          key: ${{ runner.os }}-models-v1.0.0-models
+
+      - name: 5. Instalar dependências do sistema
         run: |
           sudo apt-get update
           sudo apt-get install -y libsndfile1 ffmpeg
 
-      - name: 5. Instalar dependências Python
+      - name: 6. Instalar dependências Python
         run: |
           python -m pip install --upgrade pip
           pip install -r ultimatevocalremovergui-master/requirements.txt
 
-      - name: 6. Corrigir compatibilidade do PyTorch (Demucs)
+      - name: 7. Corrigir compatibilidade do PyTorch (Demucs)
         run: |
+          # Este passo só precisa rodar se as dependências foram instaladas, o que é sempre o caso.
           sed -i "s/torch.load(path, 'cpu')/torch.load(path, 'cpu', weights_only=False)/g" ultimatevocalremovergui-master/demucs/states.py
 
-      - name: 7. Criar diretórios para os modelos
-        run: |
-          mkdir -p ultimatevocalremovergui-master/models/Demucs_Models/v3_v4_repo
-          mkdir -p ultimatevocalremovergui-master/models/MDX_Net_Models
-          
-      - name: 8. Baixar modelos do Release
+      # --- OTIMIZAÇÃO: ESTE PASSO AGORA SÓ EXECUTA SE O CACHE DE MODELOS NÃO EXISTIR ---
+      - name: 8. Baixar modelos do Release (se o cache não for encontrado)
+        # A condição 'if' verifica a saída do passo 'cache-models'.
+        # 'cache-hit' é 'true' se o cache foi restaurado com sucesso.
+        if: steps.cache-models.outputs.cache-hit != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          echo "Cache de modelos não encontrado. Baixando..."
+          mkdir -p ultimatevocalremovergui-master/models/Demucs_Models/v3_v4_repo
+          mkdir -p ultimatevocalremovergui-master/models/MDX_Net_Models
           gh release download v1.0.0-models --clobber --dir temp_models
           mv temp_models/*.onnx ultimatevocalremovergui-master/models/MDX_Net_Models/
           mv temp_models/*.th ultimatevocalremovergui-master/models/Demucs_Models/v3_v4_repo/
           mv temp_models/*.yaml ultimatevocalremovergui-master/models/Demucs_Models/v3_v4_repo/
+          echo "Download concluído."
 
       - name: 9. Executar separação de áudio
         run: |
