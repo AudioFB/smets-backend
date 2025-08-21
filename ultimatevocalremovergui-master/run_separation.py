@@ -1,18 +1,16 @@
-# run_separation.py
+# run_separation.py (versão final corrigida para MDX)
 import os
 import argparse
 import requests
 import uuid
+import hashlib
+import json
 from argparse import Namespace
 import torch
+from demucs.hdemucs import HDemucs as HTDemucs 
 
-# --- CORREÇÃO FINAL AQUI ---
-# O erro do Pytorch era literal. O modelo foi salvo com uma classe chamada HTDemucs.
-# Nós importamos a classe real (HDemucs) mas precisamos autorizar o nome antigo.
-from demucs.hdemucs import HDemucs as HTDemucs # Importamos HDemucs mas damos o apelido HTDemucs
-torch.serialization.add_safe_globals([HTDemucs]) # Autorizamos o nome que o Pytorch espera
+torch.serialization.add_safe_globals([HTDemucs])
 
-# Importa as classes de separação que você já tem
 from separate import SeperateDemucs, SeperateMDX, SeperateMDXC
 from lib_v5.vr_network.model_param_init import ModelParameters
 
@@ -34,9 +32,28 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_FOLDER = os.path.join(BASE_DIR, 'models')
 INPUT_FOLDER = os.path.join(BASE_DIR, 'inputs')
 OUTPUT_FOLDER = os.path.join(BASE_DIR, 'outputs')
+MDX_HASH_DIR = os.path.join(MODELS_FOLDER, 'MDX_Net_Models', 'model_data')
 
 os.makedirs(INPUT_FOLDER, exist_ok=True)
 os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+
+# --- Nova Função para obter hash e carregar parâmetros ---
+def get_model_hash(model_path):
+    try:
+        with open(model_path, 'rb') as f:
+            f.seek(- 10000 * 1024, 2)
+            model_hash = hashlib.md5(f.read()).hexdigest()
+    except:
+        model_hash = hashlib.md5(open(model_path,'rb').read()).hexdigest()
+    return model_hash
+
+def get_mdx_model_params(model_path):
+    model_hash = get_model_hash(model_path)
+    json_path = os.path.join(MDX_HASH_DIR, f"{model_hash}.json")
+    if os.path.exists(json_path):
+        with open(json_path, 'r') as f:
+            return json.load(f)
+    return {}
 
 def main():
     parser = argparse.ArgumentParser(description='Separa faixas de áudio usando modelos UVR.')
@@ -50,7 +67,6 @@ def main():
     print(f"Método: {args.process_method}")
     print(f"Baixando áudio de: {args.audio_url}")
 
-    # --- Lógica de download usando a biblioteca requests ---
     job_id = str(uuid.uuid4())
     input_path = os.path.join(INPUT_FOLDER, f"{job_id}_audio_input") 
     
@@ -66,7 +82,6 @@ def main():
         print(f"\nErro ao baixar o áudio: {e}")
         return
 
-    # --- Preparar os dados para o processo de separação ---
     process_data = {
         'audio_file': input_path,
         'audio_file_base': os.path.splitext(os.path.basename(input_path))[0],
@@ -84,10 +99,10 @@ def main():
     params = {}
     model_path = ""
     
-    # --- Lógica para encontrar o caminho do modelo e definir parâmetros ---
     if args.process_method == MDX_ARCH_TYPE:
-        model_filename_onnx = os.path.join(MODELS_FOLDER, 'MDX_Net_Models', f'{args.model_name}.onnx')
-        model_filename_ckpt = os.path.join(MODELS_FOLDER, 'MDX_Net_Models', f'{args.model_name}.ckpt')
+        model_folder = os.path.join(MODELS_FOLDER, 'MDX_Net_Models')
+        model_filename_onnx = os.path.join(model_folder, f'{args.model_name}.onnx')
+        model_filename_ckpt = os.path.join(model_folder, f'{args.model_name}.ckpt')
 
         if os.path.exists(model_filename_onnx):
             model_path = model_filename_onnx
@@ -99,19 +114,31 @@ def main():
             print(f"Modelo MDX-Net não encontrado: {args.model_name}")
             return
             
-        params['primary_stem'] = VOCAL_STEM
+        # --- CORREÇÃO AQUI: Carregar os parâmetros do JSON ---
+        model_json_params = get_mdx_model_params(model_path)
+        if model_json_params:
+            params['compensate'] = model_json_params.get('compensate', 1.035)
+            params['mdx_dim_f_set'] = model_json_params.get('mdx_dim_f_set')
+            params['mdx_dim_t_set'] = model_json_params.get('mdx_dim_t_set')
+            params['mdx_n_fft_scale_set'] = model_json_params.get('mdx_n_fft_scale_set')
+            params['primary_stem'] = model_json_params.get('primary_stem', VOCAL_STEM)
+        else:
+            print(f"Aviso: Parâmetros para o modelo {args.model_name} não encontrados. Usando valores padrão.")
+            params['primary_stem'] = VOCAL_STEM
+
 
     elif args.process_method == DEMUCS_ARCH_TYPE:
         model_path = os.path.join(MODELS_FOLDER, 'Demucs_Models', 'v3_v4_repo', f'{args.model_name}.yaml')
         if not os.path.exists(model_path):
              model_path = os.path.join(MODELS_FOLDER, 'Demucs_Models', f'{args.model_name}.ckpt')
 
-        if '4s' in args.model_name:
-            params['demucs_stem_count'], params['demucs_source_map'] = 4, DEMUCS_4_SOURCE_MAPPER
+        if '6s' in args.model_name: # Lógica para 6 stems, se necessário
+             params['demucs_stem_count'] = 6
+        elif '4s' in args.model_name:
+            params['demucs_stem_count'] = 4
         else:
-            params['demucs_stem_count'], params['demucs_source_map'] = 2, DEMUCS_2_SOURCE_MAPPER
+            params['demucs_stem_count'] = 2
 
-    # --- Bloco completo de atributos padrão restaurado ---
     model_data = Namespace(
         **{
             **dict(
@@ -150,7 +177,6 @@ def main():
         }
     )
 
-    # --- Executar a separação ---
     try:
         separator = None
         if model_data.process_method == DEMUCS_ARCH_TYPE:
