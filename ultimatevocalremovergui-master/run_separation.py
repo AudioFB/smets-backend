@@ -1,16 +1,16 @@
-# run_separation.py (versão final corrigida para MDX)
+# run_separation.py (versão final adaptada para RunPod e GitHub Actions)
 import os
 import argparse
 import requests
-import uuid
-import json
+import zipfile # Adicionado para compactar os resultados
 import hashlib
+import json
 from argparse import Namespace
 import torch
 from demucs.hdemucs import HDemucs as HTDemucs
 
+# --- Imports e Configurações Iniciais ---
 torch.serialization.add_safe_globals([HTDemucs])
-
 from separate import SeperateDemucs, SeperateMDX, SeperateMDXC
 
 # --- DEFINIÇÃO DE CONSTANTES ---
@@ -23,19 +23,12 @@ WAV = 'WAV'
 WAV_TYPE_16 = 'PCM_16'
 VOCAL_STEM = 'Vocals'
 INST_STEM = 'Instrumental'
-DEMUCS_2_SOURCE_MAPPER = {'vocals': 0, 'instrumental': 1}
-DEMUCS_4_SOURCE_MAPPER = {'drums': 0, 'bass': 1, 'other': 2, 'vocals': 3}
 
-# --- Configuração dos diretórios ---
+# --- Configuração dos diretórios base ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_FOLDER = os.path.join(BASE_DIR, 'models')
-INPUT_FOLDER = os.path.join(BASE_DIR, 'inputs')
-OUTPUT_FOLDER = os.path.join(BASE_DIR, 'outputs')
 
-os.makedirs(INPUT_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
-
-# --- Novas Funções (Adaptadas do seu api.py) ---
+# --- Funções Auxiliares (mantidas do seu original) ---
 def get_model_hash(model_path):
     try:
         with open(model_path, 'rb') as f:
@@ -51,35 +44,63 @@ if os.path.exists(MDX_HASH_JSON):
         MDX_MODEL_PARAMS = json.load(f)
 
 def main():
+    # --- ETAPA 1: Análise dos Argumentos (Modificado) ---
+    # Esta seção foi completamente refeita para se alinhar com o handler do RunPod e o PHP.
     parser = argparse.ArgumentParser(description='Separa faixas de áudio usando modelos UVR.')
+    parser.add_argument('--jobId', required=True, help='ID único do Job.')
+    parser.add_argument('--filename', required=True, help='Nome do arquivo de áudio original.')
+    parser.add_argument('--baseUrl', required=True, help='URL base do servidor web (ex: https://letdaw.com).')
+    parser.add_argument('--isRunPod', default="False", help='Flag para indicar se está rodando no RunPod.')
+    
+    # Estes argumentos vêm do seu frontend/PHP agora, vamos mantê-los.
     parser.add_argument('--model-name', required=True, help='Nome do modelo a ser usado.')
     parser.add_argument('--process-method', required=True, help='Método de processamento (e.g., MDX-Net, Demucs).')
-    parser.add_argument('--audio-url', required=True, help='URL do arquivo de áudio para processar.')
-    
+
     args = parser.parse_args()
 
-    print(f"Iniciando processo para o modelo: {args.model_name}")
-    print(f"Método: {args.process_method}")
-    print(f"Baixando áudio de: {args.audio_url}")
+    job_id = args.jobId
+    filename = args.filename
+    base_url = args.baseUrl
+    is_runpod = args.isRunPod.lower() == 'true'
 
-    job_id = str(uuid.uuid4())
-    input_path = os.path.join(INPUT_FOLDER, f"{job_id}_audio_input") 
+    print(f"Iniciando Job ID: {job_id}")
+    print(f"Modelo: {args.model_name}, Método: {args.process_method}")
+
+    # --- ETAPA 2: Preparar Ambiente e Arquivo de Entrada (Modificado) ---
     
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36'}
-        with requests.get(args.audio_url, headers=headers, stream=True) as r:
-            r.raise_for_status()
-            with open(input_path, 'wb') as f:
-                for chunk in r.iter_content(chunk_size=8192): 
-                    f.write(chunk)
-        print("\nDownload do áudio concluído.")
-    except Exception as e:
-        print(f"\nErro ao baixar o áudio: {e}")
-        return
+    # Define o diretório de trabalho e o de saída dinamicamente.
+    if is_runpod:
+        # No RunPod, o handler já baixou o arquivo para /tmp/{job_id}/
+        work_dir = f"/tmp/{job_id}"
+        print(f"Ambiente RunPod detectado. Usando diretório de trabalho: {work_dir}")
+    else:
+        # Lógica original para GitHub Actions: cria pasta local e baixa o arquivo.
+        work_dir = f"./{job_id}"
+        os.makedirs(work_dir, exist_ok=True)
+        print(f"Ambiente local/GitHub detectado. Usando diretório de trabalho: {work_dir}")
+        try:
+            download_url = f"{base_url}/mixbuster/uploads/{job_id}/{filename}"
+            print(f"Baixando áudio de: {download_url}")
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            with requests.get(download_url, headers=headers, stream=True) as r:
+                r.raise_for_status()
+                with open(os.path.join(work_dir, filename), 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192): 
+                        f.write(chunk)
+            print("Download do áudio concluído.")
+        except Exception as e:
+            print(f"Erro ao baixar o áudio: {e}")
+            return # Encerra o script se não conseguir baixar
+
+    input_path = os.path.join(work_dir, filename)
+    output_folder = work_dir # Usaremos o mesmo diretório para os arquivos de saída.
+
+    # --- ETAPA 3: Lógica de Processamento (Seu código original, adaptado para o novo output_folder) ---
 
     process_data = {
         'audio_file': input_path, 'audio_file_base': os.path.splitext(os.path.basename(input_path))[0],
-        'export_path': OUTPUT_FOLDER, 'set_progress_bar': lambda *args, **kwargs: None, 
+        'export_path': output_folder, # MODIFICADO: Aponta para o diretório dinâmico
+        'set_progress_bar': lambda *args, **kwargs: None, 
         'write_to_console': lambda text, base_text="": print(text), 'process_iteration': lambda: None,
         'cached_source_callback': lambda *args, **kwargs: (None, None),
         'cached_model_source_holder': lambda *args, **kwargs: None,
@@ -124,39 +145,10 @@ def main():
 
     model_data = Namespace(
         **{
-            **dict(
-                is_mdx_ckpt=False, is_tta=False, is_post_process=False, is_high_end_process='none', 
-                post_process_threshold=0.1, aggression_setting=0.1, batch_size=4, window_size=512, 
-                is_denoise=False, is_denoise_model=False, is_mdx_c_seg_def=False, mdx_batch_size=1, 
-                compensate=1.035, mdx_segment_size=256, mdx_dim_f_set=None, mdx_dim_t_set=None, 
-                mdx_n_fft_scale_set=None, chunks=0, margin=44100, demucs_version=DEMUCS_V4, 
-                segment=DEFAULT, shifts=2, overlap=0.25, is_split_mode=True, is_chunk_demucs=True, 
-                demucs_stems=ALL_STEMS, is_demucs_combine_stems=True, demucs_source_list=[], 
-                demucs_source_map={}, demucs_stem_count=0, is_gpu_conversion=-1, device_set=DEFAULT, 
-                is_use_opencl=False, wav_type_set=WAV_TYPE_16, mp3_bit_set='320k', save_format=WAV, 
-                is_normalization=False, is_primary_stem_only=False, is_secondary_stem_only=False, 
-                is_ensemble_mode=False, is_pitch_change=False, semitone_shift=0, 
-                is_match_frequency_pitch=False, is_secondary_model_activated=False, 
-                secondary_model=None, pre_proc_model=None, is_secondary_model=False, overlap_mdx=0.5, 
-                overlap_mdx23=8, is_mdx_combine_stems=False, is_mdx_c=False, mdx_c_configs=None, 
-                mdxnet_stem_select=VOCAL_STEM, mixer_path='lib_v5/mixer.ckpt', model_samplerate=44100, 
-                model_capacity=(64, 128), is_vr_51_model=False, is_pre_proc_model=False, 
-                primary_model_primary_stem=VOCAL_STEM, primary_stem_native=VOCAL_STEM, 
-                primary_stem=VOCAL_STEM, secondary_stem=INST_STEM, is_invert_spec=False, 
-                is_deverb_vocals=False, is_mixer_mode=False, secondary_model_scale=0.5, 
-                is_demucs_pre_proc_model_inst_mix=False, DENOISER_MODEL=None, DEVERBER_MODEL=None, 
-                vocal_split_model=None, is_vocal_split_model=False, is_save_inst_vocal_splitter=False, 
-                is_inst_only_voc_splitter=False, is_karaoke=False, is_bv_model=False, 
-                bv_model_rebalance=0.0, is_sec_bv_rebalance=False, deverb_vocal_opt=None, 
-                is_save_vocal_only=False, secondary_model_4_stem=[None]*4, 
-                secondary_model_4_stem_scale=[0.5]*4, ensemble_primary_stem=VOCAL_STEM, 
-                is_multi_stem_ensemble=False
-            ), 
+            # (Toda a sua configuração de Namespace original permanece aqui, sem alterações)
+            **dict(is_mdx_ckpt=False,is_tta=False,is_post_process=False,is_high_end_process='none',post_process_threshold=0.1,aggression_setting=0.1,batch_size=4,window_size=512,is_denoise=False,is_denoise_model=False,is_mdx_c_seg_def=False,mdx_batch_size=1,compensate=1.035,mdx_segment_size=256,mdx_dim_f_set=None,mdx_dim_t_set=None,mdx_n_fft_scale_set=None,chunks=0,margin=44100,demucs_version=DEMUCS_V4,segment=DEFAULT,shifts=2,overlap=0.25,is_split_mode=True,is_chunk_demucs=True,demucs_stems=ALL_STEMS,is_demucs_combine_stems=True,demucs_source_list=[],demucs_source_map={},demucs_stem_count=0,is_gpu_conversion=-1,device_set=DEFAULT,is_use_opencl=False,wav_type_set=WAV_TYPE_16,mp3_bit_set='320k',save_format=WAV,is_normalization=False,is_primary_stem_only=False,is_secondary_stem_only=False,is_ensemble_mode=False,is_pitch_change=False,semitone_shift=0,is_match_frequency_pitch=False,is_secondary_model_activated=False,secondary_model=None,pre_proc_model=None,is_secondary_model=False,overlap_mdx=0.5,overlap_mdx23=8,is_mdx_combine_stems=False,is_mdx_c=False,mdx_c_configs=None,mdxnet_stem_select=VOCAL_STEM,mixer_path='lib_v5/mixer.ckpt',model_samplerate=44100,model_capacity=(64,128),is_vr_51_model=False,is_pre_proc_model=False,primary_model_primary_stem=VOCAL_STEM,primary_stem_native=VOCAL_STEM,primary_stem=VOCAL_STEM,secondary_stem=INST_STEM,is_invert_spec=False,is_deverb_vocals=False,is_mixer_mode=False,secondary_model_scale=0.5,is_demucs_pre_proc_model_inst_mix=False,DENOISER_MODEL=None,DEVERBER_MODEL=None,vocal_split_model=None,is_vocal_split_model=False,is_save_inst_vocal_splitter=False,is_inst_only_voc_splitter=False,is_karaoke=False,is_bv_model=False,bv_model_rebalance=0.0,is_sec_bv_rebalance=False,deverb_vocal_opt=None,is_save_vocal_only=False,secondary_model_4_stem=[None]*4,secondary_model_4_stem_scale=[0.5]*4,ensemble_primary_stem=VOCAL_STEM,is_multi_stem_ensemble=False), 
             **params, 
-            **dict(
-                process_method=args.process_method, model_path=model_path,
-                model_name=args.model_name, model_basename=args.model_name
-            )
+            **dict(process_method=args.process_method,model_path=model_path,model_name=args.model_name,model_basename=args.model_name)
         }
     )
 
@@ -173,14 +165,46 @@ def main():
         if separator:
             separator.seperate()
             print("\nSeparação concluída!")
-            print(f"Arquivos de saída salvos em: {OUTPUT_FOLDER}")
-            result_files = os.listdir(OUTPUT_FOLDER)
-            print("Arquivos gerados:", result_files)
         else:
             print(f"Método de processamento não suportado: {model_data.process_method}")
+            return
 
     except Exception as e:
         print(f"\nOcorreu um erro durante a separação: {e}")
+        import traceback
+        traceback.print_exc()
+        return
+
+    # --- ETAPA 4: Compactar e Fazer Upload dos Resultados (Adicionado) ---
+    
+    try:
+        zip_path = os.path.join(work_dir, f"{job_id}.zip")
+        print(f"Criando arquivo zip em: {zip_path}")
+        
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for root, dirs, files in os.walk(output_folder):
+                for file in files:
+                    # Adiciona ao zip apenas os arquivos de áudio resultantes
+                    if file.lower().endswith(('.wav', '.mp3', '.flac')):
+                        file_path = os.path.join(root, file)
+                        zipf.write(file_path, os.path.basename(file_path))
+        
+        print("Compactação concluída.")
+        
+        # Faz o upload do arquivo .zip para o servidor web
+        upload_url = f'{base_url}/mixbuster/upload_result.php'
+        print(f"Enviando resultado para: {upload_url}")
+        
+        with open(zip_path, 'rb') as f:
+            files = {'file': (f"{job_id}.zip", f)}
+            data = {'jobId': job_id}
+            response = requests.post(upload_url, files=files, data=data)
+            response.raise_for_status()
+        
+        print(f"Upload finalizado. Resposta do servidor: {response.status_code} - {response.text}")
+
+    except Exception as e:
+        print(f"\nOcorreu um erro durante a compactação ou upload: {e}")
         import traceback
         traceback.print_exc()
 
