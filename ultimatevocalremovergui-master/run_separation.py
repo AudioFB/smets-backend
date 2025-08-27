@@ -53,8 +53,8 @@ def main():
     parser.add_argument('--isRunPod', default="False", help='Flag para indicar se está rodando no RunPod.')
     
     # Estes argumentos vêm do seu frontend/PHP agora, vamos mantê-los.
-    parser.add_argument('--model-name', required=True, help='Nome do modelo a ser usado.')
-    parser.add_argument('--process-method', required=True, help='Método de processamento (e.g., MDX-Net, Demucs).')
+    parser.add_argument('--model_name', required=True, help='Nome do modelo a ser usado.')
+    parser.add_argument('--process_method', required=True, help='Método de processamento.')
 
     args = parser.parse_args()
 
@@ -210,3 +210,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
