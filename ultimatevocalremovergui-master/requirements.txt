@@ -1,12 +1,6 @@
-# requirements.txt (versão MINIMALISTA e segura)
-
-# Bibliotecas principais que a imagem pode não ter
+# requirements.txt (versão minimalista e segura)
 librosa
 onnxruntime-gpu
-
-# Utilitários essenciais
 ffmpeg-python
 requests
-
-# Pacote específico do RunPod
 runpod
