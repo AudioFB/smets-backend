@@ -1,7 +1,8 @@
-# Dependências essenciais, incluindo o PyTorch
+# Dependências essenciais, incluindo torch e julius
 torch
 torchvision
 torchaudio
+julius
 librosa
 onnxruntime-gpu
 ffmpeg-python
