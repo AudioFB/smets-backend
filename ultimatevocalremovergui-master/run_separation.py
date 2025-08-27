@@ -1,4 +1,4 @@
-# run_separation.py (versão final COMPLETA e corrigida para RunPod)
+# run_separation.py (versão FINAL, baseada no original e corrigida)
 import os
 import argparse
 import requests
@@ -11,11 +11,11 @@ from demucs.hdemucs import HDemucs as HTDemucs
 import zipfile
 import traceback
 
-# --- Imports e Configurações Iniciais ---
+# --- Imports e Configurações Iniciais (do seu script original) ---
 torch.serialization.add_safe_globals([HTDemucs])
 from separate import SeperateDemucs, SeperateMDX, SeperateMDXC
 
-# --- DEFINIÇÃO DE CONSTANTES ---
+# --- DEFINIÇÃO DE CONSTANTES (do seu script original) ---
 DEMUCS_ARCH_TYPE = 'Demucs'
 MDX_ARCH_TYPE = 'MDX-Net'
 DEMUCS_V4 = 'v4'
@@ -28,11 +28,11 @@ INST_STEM = 'Instrumental'
 DEMUCS_2_SOURCE_MAPPER = {'vocals': 0, 'instrumental': 1}
 DEMUCS_4_SOURCE_MAPPER = {'drums': 0, 'bass': 1, 'other': 2, 'vocals': 3}
 
-# --- Configuração dos diretórios base ---
+# --- Configuração dos diretórios (do seu script original) ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_FOLDER = os.path.join(BASE_DIR, 'models')
 
-# --- Funções Auxiliares ---
+# --- Funções Auxiliares (do seu script original) ---
 def get_model_hash(model_path):
     try:
         with open(model_path, 'rb') as f:
@@ -48,7 +48,7 @@ if os.path.exists(MDX_HASH_JSON):
         MDX_MODEL_PARAMS = json.load(f)
 
 def main():
-    # --- ETAPA 1: Análise dos Argumentos (Corrigida para o RunPod) ---
+    # --- ETAPA 1: Análise dos Argumentos (ADAPTADO PARA O RUNPOD) ---
     parser = argparse.ArgumentParser(description='Separa faixas de áudio usando modelos UVR.')
     parser.add_argument('--jobId', required=True, help='ID único do Job.')
     parser.add_argument('--filename', required=True, help='Nome do arquivo de áudio original.')
@@ -58,24 +58,19 @@ def main():
     parser.add_argument('--process_method', required=True, help='Método de processamento.')
 
     args = parser.parse_args()
-
-    job_id = args.jobId
-    filename = args.filename
-    base_url = args.baseUrl
     
-    print(f"Iniciando Job ID: {job_id}")
-    print(f"Modelo: {args.model_name}, Método: {args.process_method}")
+    # Adiciona um print logo no início para vermos no log se o script começou
+    print(f"--- run_separation.py iniciado para o Job ID: {args.jobId} ---")
 
-    # --- ETAPA 2: Preparar Ambiente e Arquivo de Entrada ---
-    work_dir = f"/tmp/{job_id}"
-    print(f"Ambiente RunPod. Usando diretório de trabalho: {work_dir}")
-    input_path = os.path.join(work_dir, filename)
-    output_folder = work_dir
+    # --- ETAPA 2: Preparar Ambiente e Arquivo de Entrada (ADAPTADO PARA O RUNPOD) ---
+    work_dir = f"/tmp/{args.jobId}"
+    input_path = os.path.join(work_dir, args.filename)
+    output_folder = work_dir # Usaremos o mesmo diretório para os arquivos de saída
 
-    # --- ETAPA 3: Lógica de Processamento ---
+    # --- ETAPA 3: Lógica de Processamento (DO SEU SCRIPT ORIGINAL, SEM MUDANÇAS) ---
     process_data = {
         'audio_file': input_path, 'audio_file_base': os.path.splitext(os.path.basename(input_path))[0],
-        'export_path': output_folder,
+        'export_path': output_folder, 
         'set_progress_bar': lambda *args, **kwargs: None, 
         'write_to_console': lambda text, base_text="": print(text), 'process_iteration': lambda: None,
         'cached_source_callback': lambda *args, **kwargs: (None, None),
@@ -179,26 +174,27 @@ def main():
         traceback.print_exc()
         return
 
-    # --- ETAPA 4: Compactar e Fazer Upload dos Resultados ---
+    # --- ETAPA 4: Compactar e Fazer Upload dos Resultados (ADAPTADO PARA O RUNPOD) ---
     try:
-        zip_path = os.path.join(work_dir, f"{job_id}.zip")
+        zip_path = os.path.join(work_dir, f"{args.jobId}.zip")
         print(f"Criando arquivo zip em: {zip_path}")
         
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(output_folder):
                 for file in files:
-                    if file.lower().endswith(('.wav', '.mp3', '.flac')):
+                    # Adiciona ao zip apenas os arquivos de áudio resultantes e ignora o original
+                    if file.lower().endswith(('.wav', '.mp3', '.flac')) and file != args.filename:
                         file_path = os.path.join(root, file)
                         zipf.write(file_path, os.path.basename(file_path))
         
         print("Compactação concluída.")
         
-        upload_url = f'{base_url}/mixbuster/upload_result.php'
+        upload_url = f'{args.baseUrl}/mixbuster/upload_result.php'
         print(f"Enviando resultado para: {upload_url}")
         
         with open(zip_path, 'rb') as f:
-            files = {'file': (f"{job_id}.zip", f)}
-            data = {'jobId': job_id}
+            files = {'file': (f"{args.jobId}.zip", f)}
+            data = {'jobId': args.jobId}
             response = requests.post(upload_url, files=files, data=data)
             response.raise_for_status()
         
