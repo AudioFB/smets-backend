@@ -1,43 +1,13 @@
-# requirements.txt (Final - Compatível com a imagem oficial runpod/pytorch)
+# requirements.txt (versão MINIMALISTA e segura)
 
-# Os pacotes PyTorch principais (torch, torchaudio, etc.) já estão no container.
-# Não os especificamos para evitar conflitos.
-
-# Frameworks de IA e dependências que precisam ser adicionados
-onnxruntime-gpu
-onnx
-pytorch_lightning
-
-# Bibliotecas para processamento de áudio e dados
+# Bibliotecas principais para processamento de áudio e modelos
 librosa
 numba
-audioread
-pydub
-pyrubberband
+onnxruntime-gpu
 
-# Utilitários e outras dependências
+# Utilitários essenciais
 ffmpeg-python
 requests
-PyYAML
-einops
-future
-julius
-kthread
-llvmlite
-matchering
-ml_collections
-natsort
-omegaconf
-opencv-python
-Pillow
-psutil
-soundstretch
-urllib3
-wget
-samplerate
-diffq
-onnx2pytorch
-SoundFile
 
 # Pacote específico do RunPod
 runpod
