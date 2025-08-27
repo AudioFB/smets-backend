@@ -1,10 +1,23 @@
-# Dependências essenciais, incluindo torch e julius
+# ---- Frameworks Principais de IA e ML ----
 torch
 torchvision
 torchaudio
-julius
-librosa
+pytorch_lightning
+onnx
 onnxruntime-gpu
+onnx2pytorch
+einops
+omegaconf
+
+# ---- Bibliotecas de Processamento de Áudio ----
+librosa
+julius
+audioread
+pydub
+pyrubberband
+SoundFile
 ffmpeg-python
+
+# ---- Bibliotecas do Aplicativo e Ambiente ----
 requests
 runpod
