@@ -1,41 +1,6 @@
-# Dependências do Repositório Oficial UVR5 (sem versões fixas)
-audioread
-certifi
-cffi
-cryptography
-einops
-future
-julius
-kthread
+# Dependências essenciais - pip irá resolver as versões corretas
 librosa
-llvmlite
-matchering
-ml_collections
-natsort
-omegaconf
-opencv-python
-Pillow
-psutil
-pydub
-pyrubberband
-pytorch_lightning
-PyYAML
-resampy
-scipy
-soundstretch
-torch
-urllib3
-wget
-samplerate
-diffq
-onnx
-onnxruntime
 onnxruntime-gpu
-onnx2pytorch
-SoundFile
-numpy
-
-# Dependências adicionais para o worker
+ffmpeg-python
 requests
 runpod
-ffmpeg-python
