@@ -1,6 +1,6 @@
-# requirements.txt (versão final compatível com a imagem oficial pytorch/pytorch)
+# requirements.txt (Final - Compatível com a imagem oficial runpod/pytorch)
 
-# Os pacotes PyTorch principais (torch, torchaudio, torchvision) já estão no container.
+# Os pacotes PyTorch principais (torch, torchaudio, etc.) já estão no container.
 # Não os especificamos para evitar conflitos.
 
 # Frameworks de IA e dependências que precisam ser adicionados
