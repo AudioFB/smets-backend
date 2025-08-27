@@ -1,14 +1,13 @@
-# --- Frameworks de IA (Confiamos nas versões do ambiente RunPod) ---
-# torch, torchaudio, torchvision, onnxruntime-gpu e numba já estão no container.
-# Não os especificamos para evitar conflitos.
-
-# --- Dependências Principais (sem versões para maior compatibilidade) ---
-librosa
+# --- Frameworks de IA (instalando as versões mais recentes compatíveis) ---
+torch
+torchaudio
+torchvision
+onnxruntime-gpu
 onnx
-onnxruntime
-onnx2pytorch
 pytorch_lightning
-# A maioria dos outros pacotes não precisa de versões fixas e o pip resolverá as dependências.
+
+# --- Dependências Principais (sem versões fixas para máxima compatibilidade) ---
+audioread
 certifi
 cffi
 cryptography
@@ -16,10 +15,12 @@ einops
 future
 julius
 kthread
+librosa
 llvmlite
 matchering
 ml_collections
 natsort
+numba
 omegaconf
 opencv-python
 Pillow
@@ -34,7 +35,8 @@ urllib3
 wget
 samplerate
 diffq
-SoundFile; sys_platform != 'darwin'
+onnx2pytorch
+SoundFile
 numpy
 requests
 ffmpeg-python
