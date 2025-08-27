@@ -1,4 +1,3 @@
-# requirements.txt (versão minimalista e segura)
 librosa
 onnxruntime-gpu
 ffmpeg-python
