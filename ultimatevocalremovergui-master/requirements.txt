@@ -1,4 +1,7 @@
-# Dependências essenciais - pip irá resolver as versões corretas
+# Dependências essenciais, incluindo o PyTorch
+torch
+torchvision
+torchaudio
 librosa
 onnxruntime-gpu
 ffmpeg-python
