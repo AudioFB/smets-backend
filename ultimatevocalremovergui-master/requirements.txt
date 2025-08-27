@@ -1,8 +1,7 @@
 # requirements.txt (versão MINIMALISTA e segura)
 
-# Bibliotecas principais para processamento de áudio e modelos
+# Bibliotecas principais que a imagem pode não ter
 librosa
-numba
 onnxruntime-gpu
 
 # Utilitários essenciais
