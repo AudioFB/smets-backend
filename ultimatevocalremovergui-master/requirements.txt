@@ -1,23 +1,40 @@
-# ---- Frameworks Principais de IA e ML ----
-torch
-torchvision
-torchaudio
-pytorch_lightning
-onnx
-onnxruntime-gpu
-onnx2pytorch
-einops
-omegaconf
-
-# ---- Bibliotecas de Processamento de Áudio ----
-librosa
-julius
 audioread
+certifi
+cffi
+cryptography
+einop
+future
+julius
+kthread
+librosa
+llvmlite
+matchering
+ml_collections
+natsort
+omegaconf
+opencv-python
+Pillow
+psutil
 pydub
 pyrubberband
-SoundFile
-ffmpeg-python
+pytorch_lightning
+PyYAML
+resampy
+scipy
+soundstretch
+torch
+urllib3
+wget
+samplerate
+diffq
+onnx
+onnxruntime
+onnxruntime-gpu
+onnx2pytorch
+SoundFile; sys_platform != 'darwin'
+numpy
 
 # ---- Bibliotecas do Aplicativo e Ambiente ----
 requests
 runpod
+
