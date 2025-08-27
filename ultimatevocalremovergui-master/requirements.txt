@@ -33,3 +33,4 @@ onnxruntime-gpu
 onnx2pytorch
 SoundFile==0.11.0; sys_platform != 'darwin'
 numpy==1.23.5
+runpod
