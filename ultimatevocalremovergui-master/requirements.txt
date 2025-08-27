@@ -1,10 +1,9 @@
 # --- Frameworks de IA (Confiamos nas versões do ambiente RunPod para PyTorch) ---
-# torch, torchaudio, torchvision, onnxruntime-gpu já estão no container.
+# torch, torchaudio, torchvision, onnxruntime-gpu e numba já estão no container.
 # Não os especificamos para evitar conflitos.
 
-# --- Dependências Principais (sem versões fixas para máxima compatibilidade com Python 3.11) ---
+# --- Dependências Principais (sem versões fixas para máxima compatibilidade) ---
 librosa
-numba
 onnx
 onnxruntime
 onnx2pytorch
@@ -21,6 +20,7 @@ llvmlite
 matchering
 ml_collections
 natsort
+numba
 omegaconf
 opencv-python
 Pillow
