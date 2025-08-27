@@ -39,7 +39,7 @@ def handler(job):
     
     # *** CORREÇÃO AQUI: Usando underscores nos argumentos de linha de comando ***
     command = [
-        "python", script_path,
+        "python3.13", script_path,
         "--jobId", job_id,
         "--filename", filename,
         "--baseUrl", base_url,
@@ -67,4 +67,5 @@ def handler(job):
     return {"status": "success", "jobId": job_id}
 
 runpod.serverless.start({"handler": handler})
+
 
