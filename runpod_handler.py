@@ -51,7 +51,12 @@ def handler(job):
     print(f"Executando comando: {' '.join(command)}")
     
     process = subprocess.run(command, capture_output=True, text=True, cwd=".")
-    
+
+    print("--- SAÍDA DO SCRIPT DE SEPARAÇÃO ---")
+    print("STDOUT:", process.stdout)
+    print("STDERR:", process.stderr)
+    print("------------------------------------")
+
     if process.returncode != 0:
         print("--- ERRO NO SCRIPT DE SEPARAÇÃO ---")
         print("STDOUT:", process.stdout)
@@ -67,5 +72,6 @@ def handler(job):
     return {"status": "success", "jobId": job_id}
 
 runpod.serverless.start({"handler": handler})
+
 
 
