@@ -142,7 +142,7 @@ def main():
                 bv_model_rebalance=0.0, is_sec_bv_rebalance=False, deverb_vocal_opt=None, 
                 is_save_vocal_only=False, secondary_model_4_stem=[None]*4, 
                 secondary_model_4_stem_scale=[0.5]*4, ensemble_primary_stem=VOCAL_STEM, 
-                is_multi_stem_ensemble=False
+                is_multi_stem_ensemble=False, is_gpu_conversion=0, device_set='CUDA'
             ), 
             **params, 
             **dict(
@@ -213,6 +213,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
