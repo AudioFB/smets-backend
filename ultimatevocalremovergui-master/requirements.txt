@@ -35,5 +35,6 @@ numpy
 # ---- Bibliotecas do Aplicativo e Ambiente ----
 requests
 runpod
+ffmpeg-python
 
 
