@@ -193,13 +193,18 @@ def main():
         print(f"Enviando resultado para: {upload_url}")
         
         with open(zip_path, 'rb') as f:
-            files = {'file': (f"{args.jobId}.zip", f)}
-            data = {'jobId': args.jobId}
-            
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-                'Accept': '*/*'
-            }
+            zip_content = f.read()
+    
+        # Agora, enviamos o conteúdo que está na memória. O arquivo já pode ser fechado.
+        files = {'file': (f"{args.jobId}.zip", zip_content)}
+        data = {'jobId': args.jobId}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': '*/*'
+        }
+    
+    response = requests.post(upload_url, files=files, data=data, headers=headers)
+    response.raise_for_status()
         
         response = requests.post(upload_url, files=files, data=data, headers=headers)
         response.raise_for_status()
@@ -211,4 +216,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
