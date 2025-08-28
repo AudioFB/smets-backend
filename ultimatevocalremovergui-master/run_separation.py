@@ -216,11 +216,22 @@ def main():
         download_url = f"https://{public_domain}/{zip_filename}"
         print(f"Upload para R2 concluído! URL de download: {download_url}")
         
-        # --- Notifica seu servidor que o trabalho terminou e envia a URL de download ---
+        # --- Notifica seu servidor que o trabalho terminou ---
         finish_url = f'{args.baseUrl}/mixbuster/finish_job.php'
         payload = {'jobId': args.jobId, 'downloadUrl': download_url}
-        requests.post(finish_url, data=payload)
-        print(f"Notificação de conclusão enviada para: {finish_url}")
+        
+        # Adiciona os mesmos headers para passar pelo firewall
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': '*/*'
+        }
+
+        # Envia a notificação com os headers e verificação de erro
+        response = requests.post(finish_url, data=payload, headers=headers)
+        response.raise_for_status() # Garante que veremos um erro se a notificação falhar
+
+        print(f"Notificação de conclusão enviada COM SUCESSO para: {finish_url}")
+
 
     except Exception as e:
         print(f"\nOcorreu um erro durante a compactação ou upload para o R2: {e}")
@@ -228,6 +239,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
