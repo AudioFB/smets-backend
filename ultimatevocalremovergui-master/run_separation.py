@@ -206,7 +206,9 @@ def main():
             region_name='auto' # Região padrão para R2
         )
         
-        zip_filename = f"{args.jobId}.zip"
+        base_name = os.path.splitext(args.filename)[0]
+        zip_filename = f"{base_name}-mixbusted.zip"
+        
         print(f"Enviando {zip_filename} para o bucket R2: {bucket_name}")
         
         # Faz o upload do arquivo para o bucket
@@ -245,6 +247,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
