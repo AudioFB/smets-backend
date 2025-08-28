@@ -36,6 +36,7 @@ numpy
 requests
 runpod
 ffmpeg-python
+boto3
 
 
 
