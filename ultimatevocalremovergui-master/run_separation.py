@@ -195,8 +195,14 @@ def main():
         with open(zip_path, 'rb') as f:
             files = {'file': (f"{args.jobId}.zip", f)}
             data = {'jobId': args.jobId}
-            response = requests.post(upload_url, files=files, data=data)
-            response.raise_for_status()
+            
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+                'Accept': '*/*'
+            }
+        
+        response = requests.post(upload_url, files=files, data=data, headers=headers)
+        response.raise_for_status()
         
         print(f"Upload finalizado. Resposta do servidor: {response.status_code} - {response.text}")
     except Exception as e:
@@ -205,3 +211,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+
