@@ -27,8 +27,6 @@ urllib3
 wget
 samplerate
 diffq
-onnx
-onnxruntime
 onnxruntime-gpu
 onnx2pytorch
 SoundFile; sys_platform != 'darwin'
@@ -37,4 +35,5 @@ numpy
 # ---- Bibliotecas do Aplicativo e Ambiente ----
 requests
 runpod
+
 
