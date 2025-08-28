@@ -1,4 +1,4 @@
-# runpod_handler.py (versão final com underscores)
+# runpod_handler.py
 import subprocess
 import os
 import requests
@@ -9,9 +9,9 @@ def handler(job):
     
     try:
         job_id = job_input['jobId']
-        filename = job_input['filename']
-        base_url = job_input['baseUrl']
-        # *** CORREÇÃO AQUI: Lendo as chaves com underscore ***
+        # --- MUDANÇA AQUI ---
+        audio_url = job_input['audioUrl'] # Recebe a URL completa do Cloudflare R2
+        original_filename = job_input['originalFilename']
         model_name = job_input['model_name']
         process_method = job_input['process_method']
     except KeyError as e:
@@ -20,58 +20,45 @@ def handler(job):
     work_dir = f"/tmp/{job_id}"
     os.makedirs(work_dir, exist_ok=True)
     
-    download_url = f"{base_url}/mixbuster/uploads/{job_id}/{filename}"
-    input_path = os.path.join(work_dir, filename)
+    input_path = os.path.join(work_dir, original_filename)
 
     try:
-        print(f"Baixando arquivo de: {download_url}")
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-        response = requests.get(download_url, headers=headers, stream=True)
+        print(f"Baixando arquivo de: {audio_url}")
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        response = requests.get(audio_url, headers=headers, stream=True)
         response.raise_for_status()
         with open(input_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         print("Download concluído.")
     except requests.exceptions.RequestException as e:
-        return {"error": f"Falha ao baixar o arquivo: {e}"}
+        return {"error": f"Falha ao baixar o arquivo do Cloudflare R2: {e}"}
 
     script_path = "ultimatevocalremovergui-master/run_separation.py"
     
-    # *** CORREÇÃO AQUI: Usando underscores nos argumentos de linha de comando ***
+    # O comando agora passa o nome do arquivo original, não precisa mais do baseUrl
     command = [
-        "python3.13", script_path,
+        "python3", script_path,
         "--jobId", job_id,
-        "--filename", filename,
-        "--baseUrl", base_url,
-        "--isRunPod", "True",
+        "--filename", original_filename,
         "--model_name", model_name,
-        "--process_method", process_method
+        "--process_method", process_method,
+        # O baseUrl não é mais necessário aqui, mas o script de separação precisa ser ajustado
+        # para não depender dele. Vamos garantir que `run_separation.py` também esteja correto.
+        "--baseUrl", "https://cubesoundlab.com/dev/letsdaw" # Manter por enquanto para compatibilidade
     ]
     
     print(f"Executando comando: {' '.join(command)}")
     
     process = subprocess.run(command, capture_output=True, text=True, cwd=".")
 
-    print("--- SAÍDA DO SCRIPT DE SEPARAÇÃO ---")
-    print("STDOUT:", process.stdout)
-    print("STDERR:", process.stderr)
-    print("------------------------------------")
-
     if process.returncode != 0:
-        print("--- ERRO NO SCRIPT DE SEPARAÇÃO ---")
-        print("STDOUT:", process.stdout)
-        print("STDERR:", process.stderr)
-        print("------------------------------------")
         return {
             "error": "Erro durante a execução do script de separação.",
             "stdout": process.stdout,
             "stderr": process.stderr
         }
 
-    print("Processo concluído com sucesso.")
     return {"status": "success", "jobId": job_id}
 
 runpod.serverless.start({"handler": handler})
-
-
-
