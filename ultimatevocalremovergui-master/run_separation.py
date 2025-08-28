@@ -124,7 +124,7 @@ def main():
                 mdx_n_fft_scale_set=None, chunks=0, margin=44100, demucs_version=DEMUCS_V4, 
                 segment=DEFAULT, shifts=2, overlap=0.25, is_split_mode=True, is_chunk_demucs=True, 
                 demucs_stems=ALL_STEMS, is_demucs_combine_stems=True, demucs_source_list=[], 
-                demucs_source_map={}, demucs_stem_count=0, is_gpu_conversion=0, device_set='CUDA', # <-- VALORES CORRIGIDOS AQUI
+                demucs_source_map={}, demucs_stem_count=0, is_gpu_conversion=0, device_set='cuda', # <-- VALORES CORRIGIDOS AQUI
                 is_use_opencl=False, wav_type_set=WAV_TYPE_16, mp3_bit_set='320k', save_format=WAV, 
                 is_normalization=False, is_primary_stem_only=False, is_secondary_stem_only=False, 
                 is_ensemble_mode=False, is_pitch_change=False, semitone_shift=0, 
@@ -213,6 +213,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
