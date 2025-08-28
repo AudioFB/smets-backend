@@ -174,45 +174,60 @@ def main():
         traceback.print_exc()
         return
 
-    # --- ETAPA 4: Compactar e Fazer Upload dos Resultados (ADAPTADO PARA O RUNPOD) ---
+    # --- ETAPA 4: Compactar e Fazer Upload dos Resultados para o R2 ---
     try:
+        # --- Compactação (sem alterações) ---
         zip_path = os.path.join(work_dir, f"{args.jobId}.zip")
         print(f"Criando arquivo zip em: {zip_path}")
-        
         with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for root, dirs, files in os.walk(output_folder):
                 for file in files:
-                    # Adiciona ao zip apenas os arquivos de áudio resultantes e ignora o original
                     if file.lower().endswith(('.wav', '.mp3', '.flac')) and file != args.filename:
                         file_path = os.path.join(root, file)
                         zipf.write(file_path, os.path.basename(file_path))
-        
         print("Compactação concluída.")
+
+        # --- Novo Upload para o R2 ---
         
-        upload_url = f'{args.baseUrl}/mixbuster/upload_result.php'
-        print(f"Enviando resultado para: {upload_url}")
+        # Pega as credenciais das variáveis de ambiente seguras do RunPod
+        endpoint_url = os.environ.get('R2_ENDPOINT_URL')
+        access_key_id = os.environ.get('R2_ACCESS_KEY_ID')
+        secret_access_key = os.environ.get('R2_SECRET_ACCESS_KEY')
+        bucket_name = os.environ.get('R2_BUCKET_NAME')
+        public_domain = os.environ.get('R2_PUBLIC_DOMAIN')
         
-        with open(zip_path, 'rb') as f:
-            zip_content = f.read()
-    
-        # Agora, enviamos o conteúdo que está na memória. O arquivo já pode ser fechado.
-        files = {'file': (f"{args.jobId}.zip", zip_content)}
-        data = {'jobId': args.jobId}
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': '*/*'
-        }
+        # Configura o cliente para se conectar ao Cloudflare R2
+        s3 = boto3.client(
+            service_name='s3',
+            endpoint_url=endpoint_url,
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key,
+            region_name='auto' # Região padrão para R2
+        )
         
-        response = requests.post(upload_url, files=files, data=data, headers=headers)
-        response.raise_for_status()
+        zip_filename = f"{args.jobId}.zip"
+        print(f"Enviando {zip_filename} para o bucket R2: {bucket_name}")
         
-        print(f"Upload finalizado. Resposta do servidor: {response.status_code} - {response.text}")
+        # Faz o upload do arquivo para o bucket
+        s3.upload_file(zip_path, bucket_name, zip_filename)
+        
+        # Constrói a URL pública final para o usuário baixar o arquivo
+        download_url = f"https://{public_domain}/{zip_filename}"
+        print(f"Upload para R2 concluído! URL de download: {download_url}")
+        
+        # --- Notifica seu servidor que o trabalho terminou e envia a URL de download ---
+        finish_url = f'{args.baseUrl}/mixbuster/finish_job.php'
+        payload = {'jobId': args.jobId, 'downloadUrl': download_url}
+        requests.post(finish_url, data=payload)
+        print(f"Notificação de conclusão enviada para: {finish_url}")
+
     except Exception as e:
-        print(f"\nOcorreu um erro durante a compactação ou upload: {e}")
+        print(f"\nOcorreu um erro durante a compactação ou upload para o R2: {e}")
         traceback.print_exc()
 
 if __name__ == '__main__':
     main()
+
 
 
 
