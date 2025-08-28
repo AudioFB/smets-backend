@@ -2,7 +2,7 @@ audioread
 certifi
 cffi
 cryptography
-einop
+einops
 future
 julius
 kthread
@@ -36,5 +36,6 @@ numpy
 requests
 runpod
 ffmpeg-python
+
 
 
