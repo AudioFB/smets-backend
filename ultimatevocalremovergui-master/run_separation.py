@@ -218,9 +218,15 @@ def main():
         
         # --- Notifica seu servidor que o trabalho terminou ---
         finish_url = f'{args.baseUrl}/mixbuster/finish_job.php'
-        payload = {'jobId': args.jobId, 'downloadUrl': download_url}
         
-        # Adiciona os mesmos headers para passar pelo firewall
+        # Payload completo, incluindo o nome do arquivo original para deleção
+        payload = {
+            'jobId': args.jobId,
+            'downloadUrl': download_url,
+            'originalFilename': args.filename 
+        }
+        
+        # Headers para passar pelo firewall
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
             'Accept': '*/*'
@@ -228,7 +234,7 @@ def main():
 
         # Envia a notificação com os headers e verificação de erro
         response = requests.post(finish_url, data=payload, headers=headers)
-        response.raise_for_status() # Garante que veremos um erro se a notificação falhar
+        response.raise_for_status()
 
         print(f"Notificação de conclusão enviada COM SUCESSO para: {finish_url}")
 
@@ -239,6 +245,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
 
 
