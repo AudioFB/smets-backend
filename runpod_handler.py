@@ -8,7 +8,7 @@ def handler(job):
     job_input = job['input']
     
     try:
-        # ATUALIZAÇÃO: Lendo os novos parâmetros do start_job.php
+        # --- ATUALIZAÇÃO CRÍTICA: Lendo os parâmetros corretos enviados pelo start_job.php ---
         job_id = job_input['jobId']
         audio_url = job_input['audioUrl']          # Recebe a URL completa do Cloudflare R2
         original_filename = job_input['originalFilename']
@@ -24,7 +24,7 @@ def handler(job):
     input_path = os.path.join(work_dir, original_filename)
 
     try:
-        # ATUALIZAÇÃO: Baixando diretamente da URL fornecida
+        # --- ATUALIZAÇÃO: Baixando diretamente da URL fornecida ---
         print(f"Baixando arquivo de: {audio_url}")
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(audio_url, headers=headers, stream=True)
@@ -51,7 +51,6 @@ def handler(job):
     
     print(f"Executando comando: {' '.join(command)}")
     
-    # Usamos subprocess.run para simplicidade e melhor captura de logs
     process = subprocess.run(command, capture_output=True, text=True, cwd=".")
 
     print("--- SAÍDA DO SCRIPT DE SEPARAÇÃO ---")
