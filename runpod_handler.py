@@ -8,14 +8,15 @@ def handler(job):
     job_input = job['input']
     
     try:
+        # ATUALIZAÇÃO: Lendo os novos parâmetros do start_job.php
         job_id = job_input['jobId']
-        # --- MUDANÇA AQUI ---
-        audio_url = job_input['audioUrl'] # Recebe a URL completa do Cloudflare R2
+        audio_url = job_input['audioUrl']          # Recebe a URL completa do Cloudflare R2
         original_filename = job_input['originalFilename']
         model_name = job_input['model_name']
         process_method = job_input['process_method']
+        base_url = job_input['baseUrl']            # URL para notificar de volta
     except KeyError as e:
-        return {"error": f"Faltando parâmetro obrigatório no input: {e}"}
+        return {"error": f"Parâmetro obrigatório ausente no input: {e}"}
 
     work_dir = f"/tmp/{job_id}"
     os.makedirs(work_dir, exist_ok=True)
@@ -23,6 +24,7 @@ def handler(job):
     input_path = os.path.join(work_dir, original_filename)
 
     try:
+        # ATUALIZAÇÃO: Baixando diretamente da URL fornecida
         print(f"Baixando arquivo de: {audio_url}")
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(audio_url, headers=headers, stream=True)
@@ -36,21 +38,26 @@ def handler(job):
 
     script_path = "ultimatevocalremovergui-master/run_separation.py"
     
-    # O comando agora passa o nome do arquivo original, não precisa mais do baseUrl
+    # O comando agora está correto e passa os parâmetros que o script de separação espera
     command = [
         "python3", script_path,
         "--jobId", job_id,
         "--filename", original_filename,
+        "--baseUrl", base_url,
+        "--isRunPod", "True",
         "--model_name", model_name,
-        "--process_method", process_method,
-        # O baseUrl não é mais necessário aqui, mas o script de separação precisa ser ajustado
-        # para não depender dele. Vamos garantir que `run_separation.py` também esteja correto.
-        "--baseUrl", "https://cubesoundlab.com/dev/letsdaw" # Manter por enquanto para compatibilidade
+        "--process_method", process_method
     ]
     
     print(f"Executando comando: {' '.join(command)}")
     
+    # Usamos subprocess.run para simplicidade e melhor captura de logs
     process = subprocess.run(command, capture_output=True, text=True, cwd=".")
+
+    print("--- SAÍDA DO SCRIPT DE SEPARAÇÃO ---")
+    print("STDOUT:", process.stdout)
+    print("STDERR:", process.stderr)
+    print("------------------------------------")
 
     if process.returncode != 0:
         return {
@@ -59,6 +66,7 @@ def handler(job):
             "stderr": process.stderr
         }
 
+    print("Processo concluído com sucesso.")
     return {"status": "success", "jobId": job_id}
 
 runpod.serverless.start({"handler": handler})
