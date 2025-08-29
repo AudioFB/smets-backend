@@ -36,9 +36,6 @@ def handler(job):
 
     script_path = "ultimatevocalremovergui-master/run_separation.py"
     
-    # --- CORREÇÃO AQUI ---
-    # Padronizando para "python3", que é o comando padrão no ambiente Linux do RunPod
-    # e o mesmo usado pelo "pip install".
     command = [
         "python3", script_path,
         "--jobId", job_id,
