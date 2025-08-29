@@ -186,11 +186,17 @@ def execute_separation(args):
         download_url = f"https://{public_domain}/{zip_filename_r2}"
         print(f"Upload para R2 concluído! URL de download: {download_url}")
         
+        # --- CORREÇÃO AQUI ---
         finish_url = f'{args.baseUrl}/mixbuster/finish_job.php'
         payload = {'jobId': args.jobId, 'downloadUrl': download_url, 'originalFilename': args.filename}
-        response = requests.post(finish_url, data=payload, headers={'User-Agent': 'Mozilla/5.0'})
-        response.raise_for_status()
-        print(f"Notificação de conclusão enviada para: {finish_url}")
+        # Adicionamos um cabeçalho User-Agent para simular um navegador e evitar o erro 406
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
+
+        response = requests.post(finish_url, data=payload, headers=headers)
+        response.raise_for_status() # Verifica se a requisição foi bem-sucedida (status 2xx)
+        # --- FIM DA CORREÇÃO ---
+        
+        print(f"Notificação de conclusão enviada com SUCESSO para: {finish_url}")
         
         return {"status": "success"}
 
@@ -204,3 +210,4 @@ if __name__ == '__main__':
     # Adicione todos os argumentos necessários
     cli_args = parser.parse_args()
     execute_separation(cli_args)
+
