@@ -3,10 +3,9 @@ import os
 import requests
 import runpod
 from argparse import Namespace
-
-# --- ATUALIZAÇÃO: Importa a função diretamente ---
-# Adiciona o diretório ao path para que o import funcione
 import sys
+
+# Adiciona o diretório do script de separação ao path do Python
 sys.path.append('ultimatevocalremovergui-master')
 from run_separation import execute_separation
 
@@ -14,11 +13,10 @@ def handler(job):
     job_input = job['input']
     
     try:
-        # Cria um objeto 'args' similar ao que o argparse criaria
         args = Namespace(
             jobId=job_input['jobId'],
             audioUrl=job_input['audioUrl'],
-            filename=job_input['originalFilename'], # Mapeia originalFilename para filename
+            filename=job_input['originalFilename'],
             model_name=job_input['model_name'],
             process_method=job_input['process_method'],
             baseUrl=job_input['baseUrl'],
@@ -29,13 +27,11 @@ def handler(job):
 
     work_dir = f"/tmp/{args.jobId}"
     os.makedirs(work_dir, exist_ok=True)
-    
     input_path = os.path.join(work_dir, args.filename)
 
     try:
         print(f"Baixando arquivo de: {args.audioUrl}")
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(args.audioUrl, headers=headers, stream=True)
+        response = requests.get(args.audioUrl, headers={'User-Agent': 'Mozilla/5.0'}, stream=True)
         response.raise_for_status()
         with open(input_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
@@ -44,8 +40,6 @@ def handler(job):
     except requests.exceptions.RequestException as e:
         return {"error": f"Falha ao baixar o arquivo do Cloudflare R2: {e}"}
 
-    # --- ATUALIZAÇÃO: Chama a função diretamente ---
-    # Não usa mais subprocess, garantindo o mesmo ambiente Python
     result = execute_separation(args)
 
     if result.get("error"):
