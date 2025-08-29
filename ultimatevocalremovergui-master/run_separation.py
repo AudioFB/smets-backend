@@ -1,4 +1,4 @@
-# run_separation.py (versão FINAL, baseada no seu script original e corrigida para RunPod)
+# run_separation.py (versão refatorada como módulo)
 import os
 import argparse
 import requests
@@ -8,32 +8,32 @@ import hashlib
 import boto3
 from argparse import Namespace
 import torch
-from demucs.hdemucs import HDemucs as HTDemucs
+from demucs.hdemucs import HTDemucs
 import zipfile
 import traceback
 
-# --- Imports e Configurações Iniciais (do seu script original) ---
+# Mantenha todos os seus imports e constantes aqui como antes
 torch.serialization.add_safe_globals([HTDemucs])
 from separate import SeperateDemucs, SeperateMDX, SeperateMDXC
 
-# --- DEFINIÇÃO DE CONSTANTES (do seu script original) ---
 DEMUCS_ARCH_TYPE = 'Demucs'
 MDX_ARCH_TYPE = 'MDX-Net'
-DEMUCS_V4 = 'v4'
-ALL_STEMS = 'All Stems'
+# ... (mantenha todas as outras constantes)
+VOCAL_STEM = 'Vocals'
+INST_STEM = 'Instrumental'
+DEMUCS_4_SOURCE_MAPPER = {'drums': 0, 'bass': 1, 'other': 2, 'vocals': 3}
+DEMUCS_6_SOURCE_MAPPER = {'drums': 0, 'bass': 1, 'other': 2, 'vocals': 3, 'guitar': 4, 'piano': 5}
+DEMUCS_2_SOURCE_MAPPER = {'vocals': 0, 'instrumental': 1}
 DEFAULT = 'Default'
 WAV = 'WAV'
 WAV_TYPE_16 = 'PCM_16'
-VOCAL_STEM = 'Vocals'
-INST_STEM = 'Instrumental'
-DEMUCS_2_SOURCE_MAPPER = {'vocals': 0, 'instrumental': 1}
-DEMUCS_4_SOURCE_MAPPER = {'drums': 0, 'bass': 1, 'other': 2, 'vocals': 3}
+ALL_STEMS = 'All Stems'
+DEMUCS_V4 = 'v4'
 
-# --- Configuração dos diretórios (do seu script original) ---
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODELS_FOLDER = os.path.join(BASE_DIR, 'models')
 
-# --- Funções Auxiliares (do seu script original) ---
 def get_model_hash(model_path):
     try:
         with open(model_path, 'rb') as f:
@@ -48,27 +48,18 @@ if os.path.exists(MDX_HASH_JSON):
     with open(MDX_HASH_JSON, 'r') as f:
         MDX_MODEL_PARAMS = json.load(f)
 
-def main():
-    # --- ETAPA 1: Análise dos Argumentos (ADAPTADO PARA O RUNPOD) ---
-    parser = argparse.ArgumentParser(description='Separa faixas de áudio usando modelos UVR.')
-    parser.add_argument('--jobId', required=True, help='ID único do Job.')
-    parser.add_argument('--filename', required=True, help='Nome do arquivo de áudio original.')
-    parser.add_argument('--baseUrl', required=True, help='URL base do servidor web.')
-    parser.add_argument('--isRunPod', default="False", help='Flag para indicar se está rodando no RunPod.')
-    parser.add_argument('--model_name', required=True, help='Nome do modelo a ser usado.')
-    parser.add_argument('--process_method', required=True, help='Método de processamento.')
+# --- NOVA FUNÇÃO PRINCIPAL ---
+def execute_separation(args):
+    """
+    Função que contém toda a lógica de separação.
+    Recebe um objeto 'args' com todos os parâmetros necessários.
+    """
+    print(f"--- Processo de separação iniciado para o Job ID: {args.jobId} ---")
 
-    args = parser.parse_args()
-    
-    # Adiciona um print logo no início para vermos no log se o script começou
-    print(f"--- run_separation.py iniciado para o Job ID: {args.jobId} ---")
-
-    # --- ETAPA 2: Preparar Ambiente e Arquivo de Entrada (ADAPTADO PARA O RUNPOD) ---
     work_dir = f"/tmp/{args.jobId}"
     input_path = os.path.join(work_dir, args.filename)
-    output_folder = work_dir # Usaremos o mesmo diretório para os arquivos de saída
+    output_folder = work_dir
 
-    # --- ETAPA 3: Lógica de Processamento (DO SEU SCRIPT ORIGINAL, SEM MUDANÇAS) ---
     process_data = {
         'audio_file': input_path, 'audio_file_base': os.path.splitext(os.path.basename(input_path))[0],
         'export_path': output_folder, 
@@ -82,7 +73,9 @@ def main():
     params = {}
     model_path = ""
     
+    # Lógica para MDX-Net
     if args.process_method == MDX_ARCH_TYPE:
+        # ... (copie a lógica exata de if/else para MDX_ARCH_TYPE do seu script original aqui) ...
         onnx_path = os.path.join(MODELS_FOLDER, 'MDX_Net_Models', f'{args.model_name}.onnx')
         ckpt_path = os.path.join(MODELS_FOLDER, 'MDX_Net_Models', f'{args.model_name}.ckpt')
         if os.path.exists(onnx_path):
@@ -93,7 +86,7 @@ def main():
             params['is_mdx_ckpt'] = True
         else:
             print(f"Modelo MDX-Net não encontrado: {args.model_name}")
-            return
+            return {"error": f"Modelo MDX-Net não encontrado: {args.model_name}"}
         
         model_hash = get_model_hash(model_path)
         model_params_json = MDX_MODEL_PARAMS.get(model_hash, {})
@@ -103,159 +96,116 @@ def main():
         params['mdx_n_fft_scale_set'] = model_params_json.get('mdx_n_fft_scale_set')
         params['primary_stem'] = model_params_json.get('primary_stem', VOCAL_STEM)
 
+    # Lógica para Demucs
     elif args.process_method == DEMUCS_ARCH_TYPE:
+        # ... (copie a lógica exata de if/else para DEMUCS_ARCH_TYPE do seu script original aqui) ...
         model_path = os.path.join(MODELS_FOLDER, 'Demucs_Models', 'v3_v4_repo', f'{args.model_name}.yaml')
         if not os.path.exists(model_path):
              model_path = os.path.join(MODELS_FOLDER, 'Demucs_Models', f'{args.model_name}.ckpt')
 
         if '6s' in args.model_name:
              params['demucs_stem_count'] = 6
-        elif '4s' in args.model_name:
+        elif 'htdemucs' in args.model_name: # Assumindo que htdemucs padrão é 4 stem
             params['demucs_stem_count'] = 4
         else:
             params['demucs_stem_count'] = 2
 
-    model_data = Namespace(
-        **{
-            **dict(
-                is_mdx_ckpt=False, is_tta=False, is_post_process=False, is_high_end_process='none', 
-                post_process_threshold=0.1, aggression_setting=0.1, batch_size=4, window_size=512, 
-                is_denoise=False, is_denoise_model=False, is_mdx_c_seg_def=False, mdx_batch_size=1, 
-                compensate=1.035, mdx_segment_size=256, mdx_dim_f_set=None, mdx_dim_t_set=None, 
-                mdx_n_fft_scale_set=None, chunks=0, margin=44100, demucs_version=DEMUCS_V4, 
-                segment=DEFAULT, shifts=2, overlap=0.25, is_split_mode=True, is_chunk_demucs=True, 
-                demucs_stems=ALL_STEMS, is_demucs_combine_stems=True, demucs_source_list=[], 
-                demucs_source_map={}, demucs_stem_count=0, is_gpu_conversion=True, device_set='0',
-                is_use_opencl=False, wav_type_set=WAV_TYPE_16, mp3_bit_set='320k', save_format=WAV, 
-                is_normalization=False, is_primary_stem_only=False, is_secondary_stem_only=False, 
-                is_ensemble_mode=False, is_pitch_change=False, semitone_shift=0, 
-                is_match_frequency_pitch=False, is_secondary_model_activated=False, 
-                secondary_model=None, pre_proc_model=None, is_secondary_model=False, overlap_mdx=0.5, 
-                overlap_mdx23=8, is_mdx_combine_stems=False, is_mdx_c=False, mdx_c_configs=None, 
-                mdxnet_stem_select=VOCAL_STEM, mixer_path='lib_v5/mixer.ckpt', model_samplerate=44100, 
-                model_capacity=(64, 128), is_vr_51_model=False, is_pre_proc_model=False, 
-                primary_model_primary_stem=VOCAL_STEM, primary_stem_native=VOCAL_STEM, 
-                primary_stem=VOCAL_STEM, secondary_stem=INST_STEM, is_invert_spec=False, 
-                is_deverb_vocals=False, is_mixer_mode=False, secondary_model_scale=0.5, 
-                is_demucs_pre_proc_model_inst_mix=False, DENOISER_MODEL=None, DEVERBER_MODEL=None, 
-                vocal_split_model=None, is_vocal_split_model=False, is_save_inst_vocal_splitter=False, 
-                is_inst_only_voc_splitter=False, is_karaoke=False, is_bv_model=False, 
-                bv_model_rebalance=0.0, is_sec_bv_rebalance=False, deverb_vocal_opt=None, 
-                is_save_vocal_only=False, secondary_model_4_stem=[None]*4, 
-                secondary_model_4_stem_scale=[0.5]*4, ensemble_primary_stem=VOCAL_STEM, 
-                is_multi_stem_ensemble=False
-            ),
-            **params, 
-            **dict(
-                process_method=args.process_method, model_path=model_path,
-                model_name=args.model_name, model_basename=args.model_name
-            )
-        }
-    )
+    model_data = Namespace(**{**dict(
+        is_mdx_ckpt=False, is_tta=False, is_post_process=False, is_high_end_process='none', 
+        post_process_threshold=0.1, aggression_setting=0.1, batch_size=4, window_size=512, 
+        is_denoise=False, is_denoise_model=False, is_mdx_c_seg_def=False, mdx_batch_size=1, 
+        compensate=1.035, mdx_segment_size=256, mdx_dim_f_set=None, mdx_dim_t_set=None, 
+        mdx_n_fft_scale_set=None, chunks=0, margin=44100, demucs_version=DEMUCS_V4, segment=DEFAULT, 
+        shifts=2, overlap=0.25, is_split_mode=True, is_chunk_demucs=True, demucs_stems=ALL_STEMS, 
+        is_demucs_combine_stems=True, demucs_source_list=[], demucs_source_map={}, demucs_stem_count=0, 
+        is_gpu_conversion=True, device_set='0', is_use_opencl=False, wav_type_set=WAV_TYPE_16, 
+        mp3_bit_set='320k', save_format=WAV, is_normalization=False, is_primary_stem_only=False, 
+        is_secondary_stem_only=False, is_ensemble_mode=False, is_pitch_change=False, semitone_shift=0, 
+        is_match_frequency_pitch=False, is_secondary_model_activated=False, secondary_model=None, 
+        pre_proc_model=None, is_secondary_model=False, overlap_mdx=0.5, overlap_mdx23=8, 
+        is_mdx_combine_stems=False, is_mdx_c=False, mdx_c_configs=None, mdxnet_stem_select=VOCAL_STEM, 
+        mixer_path='lib_v5/mixer.ckpt', model_samplerate=44100, model_capacity=(64, 128), 
+        is_vr_51_model=False, is_pre_proc_model=False, primary_model_primary_stem=VOCAL_STEM, 
+        primary_stem_native=VOCAL_STEM, primary_stem=VOCAL_STEM, secondary_stem=INST_STEM, 
+        is_invert_spec=False, is_deverb_vocals=False, is_mixer_mode=False, secondary_model_scale=0.5, 
+        is_demucs_pre_proc_model_inst_mix=False, DENOISER_MODEL=None, DEVERBER_MODEL=None, 
+        vocal_split_model=None, is_vocal_split_model=False, is_save_inst_vocal_splitter=False, 
+        is_inst_only_voc_splitter=False, is_karaoke=False, is_bv_model=False, bv_model_rebalance=0.0, 
+        is_sec_bv_rebalance=False, deverb_vocal_opt=None, is_save_vocal_only=False, 
+        secondary_model_4_stem=[None]*4, secondary_model_4_stem_scale=[0.5]*4, 
+        ensemble_primary_stem=VOCAL_STEM, is_multi_stem_ensemble=False), **params, 
+        **dict(process_method=args.process_method, model_path=model_path, model_name=args.model_name, model_basename=args.model_name)})
 
     try:
         separator = None
         if model_data.process_method == DEMUCS_ARCH_TYPE:
             separator = SeperateDemucs(model_data=model_data, process_data=process_data)
         elif model_data.process_method == MDX_ARCH_TYPE:
-            if getattr(model_data, 'is_mdx_c', False):
-                separator = SeperateMDXC(model_data=model_data, process_data=process_data)
-            else:
-                separator = SeperateMDX(model_data=model_data, process_data=process_data)
+            separator = SeperateMDX(model_data=model_data, process_data=process_data)
 
         if separator:
             separator.seperate()
             print("\nSeparação concluída!")
         else:
-            print(f"Método de processamento não suportado: {model_data.process_method}")
-            return
+            raise ValueError(f"Método de processamento não suportado: {model_data.process_method}")
 
     except Exception as e:
         print(f"\nOcorreu um erro durante a separação: {e}")
         traceback.print_exc()
-        return
+        return {"error": f"Erro na separação: {e}"}
 
-    # --- ETAPA 4: Compactar e Fazer Upload dos Resultados para o R2 ---
     try:
-        # --- Compactação (sem alterações) ---
-        zip_path = os.path.join(work_dir, f"{args.jobId}.zip")
-        print(f"Criando arquivo zip em: {zip_path}")
-        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
-            for root, dirs, files in os.walk(output_folder):
-                for file in files:
-                    if file.lower().endswith(('.wav', '.mp3', '.flac')) and file != args.filename:
-                        file_path = os.path.join(root, file)
-                        zipf.write(file_path, os.path.basename(file_path))
+        base_name = os.path.splitext(args.filename)[0]
+        zip_filename_r2 = f"{args.jobId}-mixbusted.zip" # Nome do arquivo no R2
+        zip_path_local = os.path.join(work_dir, zip_filename_r2) # Caminho local
+        
+        print(f"Criando arquivo zip em: {zip_path_local}")
+        with zipfile.ZipFile(zip_path_local, 'w', zipfile.ZIP_DEFLATED) as zipf:
+            for file in os.listdir(output_folder):
+                if file.lower().endswith(('.wav', '.mp3', '.flac')) and file != args.filename:
+                    zipf.write(os.path.join(output_folder, file), os.path.basename(file))
         print("Compactação concluída.")
 
-        # --- Novo Upload para o R2 ---
-        
-        # Pega as credenciais das variáveis de ambiente seguras do RunPod
         endpoint_url = os.environ.get('R2_ENDPOINT_URL')
         access_key_id = os.environ.get('R2_ACCESS_KEY_ID')
         secret_access_key = os.environ.get('R2_SECRET_ACCESS_KEY')
         bucket_name = os.environ.get('R2_BUCKET_NAME')
         public_domain = os.environ.get('R2_PUBLIC_DOMAIN')
         
-        # Configura o cliente para se conectar ao Cloudflare R2
-        s3 = boto3.client(
-            service_name='s3',
-            endpoint_url=endpoint_url,
-            aws_access_key_id=access_key_id,
-            aws_secret_access_key=secret_access_key,
-            region_name='auto' # Região padrão para R2
-        )
+        s3 = boto3.client(service_name='s3', endpoint_url=endpoint_url, aws_access_key_id=access_key_id, aws_secret_access_key=secret_access_key, region_name='auto')
         
-        base_name = os.path.splitext(args.filename)[0]
-        zip_filename = f"{base_name}-mixbusted.zip"
+        print(f"Enviando {zip_filename_r2} para o bucket R2: {bucket_name}")
+        s3.upload_file(zip_path_local, bucket_name, zip_filename_r2)
         
-        print(f"Enviando {zip_filename} para o bucket R2: {bucket_name}")
-        
-        # Faz o upload do arquivo para o bucket
-        s3.upload_file(zip_path, bucket_name, zip_filename)
-        
-        # Constrói a URL pública final para o usuário baixar o arquivo
-        download_url = f"https://{public_domain}/{zip_filename}"
+        download_url = f"https://{public_domain}/{zip_filename_r2}"
         print(f"Upload para R2 concluído! URL de download: {download_url}")
         
-        # --- Notifica seu servidor que o trabalho terminou ---
         finish_url = f'{args.baseUrl}/mixbuster/finish_job.php'
-        
-        # Payload completo, incluindo o nome do arquivo original para deleção
-        payload = {
-            'jobId': args.jobId,
-            'downloadUrl': download_url,
-            'originalFilename': args.filename 
-        }
-        
-        # Headers para passar pelo firewall
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-            'Accept': '*/*'
-        }
+        payload = {'jobId': args.jobId, 'downloadUrl': download_url, 'originalFilename': args.filename}
+        headers = {'User-Agent': 'Mozilla/5.0'}
 
-        # Envia a notificação com os headers e verificação de erro
         response = requests.post(finish_url, data=payload, headers=headers)
         response.raise_for_status()
-
         print(f"Notificação de conclusão enviada COM SUCESSO para: {finish_url}")
-
+        
+        return {"status": "success"}
 
     except Exception as e:
-        print(f"\nOcorreu um erro durante a compactação ou upload para o R2: {e}")
+        print(f"\nOcorreu um erro durante a compactação ou upload: {e}")
         traceback.print_exc()
+        return {"error": f"Erro no upload/notificação: {e}"}
 
+# Este bloco só será executado se você rodar o script diretamente pelo terminal
+# Ele não será executado quando for importado
 if __name__ == '__main__':
-    main()
-
-
-
-
-
-
-
-
-
-
-
-
+    parser = argparse.ArgumentParser(description='Separa faixas de áudio usando modelos UVR.')
+    parser.add_argument('--jobId', required=True)
+    parser.add_argument('--filename', required=True)
+    parser.add_argument('--baseUrl', required=True)
+    parser.add_argument('--isRunPod', default="False")
+    parser.add_argument('--model_name', required=True)
+    parser.add_argument('--process_method', required=True)
+    args = parser.parse_args()
+    
+    # Chama a função principal com os argumentos
+    execute_separation(args)
