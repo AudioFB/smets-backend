@@ -8,15 +8,13 @@ def handler(job):
     job_input = job['input']
     
     try:
-        # --- ATUALIZAÇÃO CRÍTICA: Lendo os parâmetros corretos enviados pelo start_job.php ---
         job_id = job_input['jobId']
-        audio_url = job_input['audioUrl']          # Recebe a URL completa do Cloudflare R2
+        audio_url = job_input['audioUrl']
         original_filename = job_input['originalFilename']
         model_name = job_input['model_name']
         process_method = job_input['process_method']
-        base_url = job_input['baseUrl']            # URL para notificar de volta
+        base_url = job_input['baseUrl']
     except KeyError as e:
-        # Se alguma chave estiver faltando, retorna um erro claro
         return {"error": f"Parâmetro obrigatório ausente no input: {e}"}
 
     work_dir = f"/tmp/{job_id}"
@@ -25,7 +23,6 @@ def handler(job):
     input_path = os.path.join(work_dir, original_filename)
 
     try:
-        # --- Lógica de Download já está correta ---
         print(f"Baixando arquivo de: {audio_url}")
         headers = {'User-Agent': 'Mozilla/5.0'}
         response = requests.get(audio_url, headers=headers, stream=True)
@@ -39,7 +36,9 @@ def handler(job):
 
     script_path = "ultimatevocalremovergui-master/run_separation.py"
     
-    # O comando que será executado no worker
+    # --- CORREÇÃO AQUI ---
+    # Padronizando para "python3", que é o comando padrão no ambiente Linux do RunPod
+    # e o mesmo usado pelo "pip install".
     command = [
         "python3", script_path,
         "--jobId", job_id,
@@ -69,5 +68,4 @@ def handler(job):
     print("Processo concluído com sucesso.")
     return {"status": "success", "jobId": job_id}
 
-# Inicia o servidor do RunPod
 runpod.serverless.start({"handler": handler})
