@@ -4,12 +4,27 @@ import requests
 import runpod
 from argparse import Namespace
 import sys
+import torch  # <-- 1. IMPORTAMOS O TORCH AQUI
 
 # Adiciona o diretório do script de separação ao path do Python
 sys.path.append('ultimatevocalremovergui-master')
 from run_separation import execute_separation
 
 def handler(job):
+    # --- 2. ADICIONAMOS O BLOCO DE VERIFICAÇÃO DA GPU AQUI ---
+    print("--- VERIFICAÇÃO DE AMBIENTE SERVERLESS ---")
+    is_cuda_available = torch.cuda.is_available()
+    print(f"CUDA está disponível? {is_cuda_available}")
+
+    if is_cuda_available:
+        print(f"Nome da GPU: {torch.cuda.get_device_name(0)}")
+        print(f"Versão PyTorch: {torch.__version__}")
+    else:
+        print("AVISO CRÍTICO: A GPU não foi encontrada. O processo rodará em CPU.")
+    
+    print("-----------------------------------------")
+    # --- FIM DA VERIFICAÇÃO ---
+
     job_input = job['input']
     
     try:
