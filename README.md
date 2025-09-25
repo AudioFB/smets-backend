@@ -87,17 +87,11 @@ No final deste arquivo, há uma lógica de `fetch` para debitar os "cubes" do us
 
 ---
 
-## Setup do Projeto
-
-1.  **Clone o repositório:**
-    ```bash
-    git clone [URL_DO_SEU_REPOSITORIO]
-    ```
-2.  **Dependências do Backend:** O projeto utiliza o AWS SDK para PHP para interagir com o Cloudflare R2. Certifique-se de que o Composer está instalado e execute:
+1.  **Dependências do Backend:** O projeto utiliza o AWS SDK para PHP para interagir com o Cloudflare R2. Certifique-se de que o Composer está instalado e execute:
     ```bash
     composer install
     ```
     Isso criará o diretório `vendor/` e o arquivo `autoload.php`, que são necessários para os scripts do backend.
-3.  **Configuração de Chaves:** Preencha todas as chaves e segredos nos arquivos de configuração, como `letsdaw/mixbuster/config.php`, com suas credenciais do RunPod e Cloudflare R2.
-4.  **Permissões de Diretório:** Certifique-se de que o servidor web (Apache, Nginx) tenha permissão de escrita no diretório `letsdaw/mixbuster/uploads/`.
-5.  **Configuração do CORS:** Ajuste a política de CORS no seu bucket do Cloudflare R2 para permitir requisições GET do seu domínio de produção.
+2.  **Configuração de Chaves:** Preencha todas as chaves e segredos nos arquivos de configuração, como `letsdaw/mixbuster/config.php`, com suas credenciais do RunPod e Cloudflare R2.
+3.  **Permissões de Diretório:** Certifique-se de que o servidor web (Apache, Nginx) tenha permissão de escrita no diretório `letsdaw/mixbuster/uploads/`.
+4.  **Configuração do CORS:** Ajuste a política de CORS no seu bucket do Cloudflare R2 para permitir requisições GET do seu domínio de produção.
