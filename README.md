@@ -1,6 +1,6 @@
-# LetsDAW - Digital Audio Workstation Baseada na Web
+# LetsDAW / MixBuster - Digital Audio Workstation Baseada na Web
 
-Bem-vindo ao LetsDAW, uma Digital Audio Workstation (DAW) completa que roda diretamente no seu navegador, com um poderoso separador de stems por IA integrado, o **MixBuster**.
+LetsDAW uma Digital Audio Workstation (DAW) completa que roda diretamente no seu navegador, com um poderoso separador de stems por IA integrado, o **MixBuster**.
 
 ## Sobre o Projeto
 
