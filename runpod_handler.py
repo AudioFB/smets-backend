@@ -8,7 +8,10 @@ import torch
 from pathlib import Path
 
 # Adiciona o diretório do script de separação ao path do Python
-sys.path.append('ultimatevocalremovergui-master')
+PROJECT_DIR = Path(__file__).resolve().parent
+UVR_DIR = PROJECT_DIR / 'ultimatevocalremovergui-master'
+sys.path.insert(0, str(UVR_DIR))
+os.chdir(UVR_DIR)
 from run_separation import execute_separation
 
 # --- LÓGICA DE DOWNLOAD DE MODELOS ---
@@ -18,15 +21,15 @@ BASE_MODEL_URL = "https://github.com/AudioFB/smets-backend/releases/download/v1.
 MODEL_FILES = {
     "htdemucs": {
         "files": ["htdemucs.yaml", "955717e8-8726e21a.th"],
-        "dest": "ultimatevocalremovergui-master/models/Demucs_Models/v3_v4_repo"
+        "dest": "models/Demucs_Models/v3_v4_repo"
     },
     "htdemucs_6s": {
         "files": ["htdemucs_6s.yaml", "5c90dfd2-34c22ccb.th"],
-        "dest": "ultimatevocalremovergui-master/models/Demucs_Models/v3_v4_repo"
+        "dest": "models/Demucs_Models/v3_v4_repo"
     },
     "Reverb_HQ_By_FoxJoy": {
         "files": ["Reverb_HQ_By_FoxJoy.onnx"],
-        "dest": "ultimatevocalremovergui-master/models/MDX_Net_Models"
+        "dest": "models/MDX_Net_Models"
     }
 }
 
@@ -52,11 +55,13 @@ def download_model_if_needed(model_name):
         url = BASE_MODEL_URL + filename
         print(f"Baixando modelo '{filename}' de {url}...")
         try:
-            response = requests.get(url, stream=True)
+            response = requests.get(url, stream=True, timeout=(15, 180))
             response.raise_for_status()
-            with open(file_path, 'wb') as f:
+            partial_path = file_path.with_suffix(file_path.suffix + '.part')
+            with open(partial_path, 'wb') as f:
                 for chunk in response.iter_content(chunk_size=8192):
                     f.write(chunk)
+            partial_path.replace(file_path)
             print(f"Download de '{filename}' concluído.")
         except requests.exceptions.RequestException as e:
             # Se o download falhar, o job deve parar.
@@ -74,12 +79,15 @@ def handler(job):
     print("-----------------------------------------")
 
     job_input = job['input']
+    import re
+    if not re.fullmatch(r'[A-Za-z0-9-]{1,100}', str(job_input.get('jobId', ''))):
+        return {'error': 'Job ID inválido.'}
     
     try:
         args = Namespace(
             jobId=job_input['jobId'],
             audioUrl=job_input['audioUrl'],
-            filename=job_input['originalFilename'],
+            filename=os.path.basename(job_input['originalFilename'].replace('\\', '/')),
             model_name=job_input['model_name'],
             process_method=job_input['process_method'],
             baseUrl=job_input['baseUrl'],
@@ -101,7 +109,7 @@ def handler(job):
 
     try:
         print(f"Baixando arquivo de áudio de: {args.audioUrl}")
-        response = requests.get(args.audioUrl, headers={'User-Agent': 'Mozilla/5.0'}, stream=True)
+        response = requests.get(args.audioUrl, headers={'User-Agent': 'Mozilla/5.0'}, stream=True, timeout=(15, 180))
         response.raise_for_status()
         with open(input_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
@@ -116,7 +124,8 @@ def handler(job):
         return result
 
     print("Handler concluído com sucesso.")
-    return {"status": "success", "jobId": args.jobId}
+    return {**result, "jobId": args.jobId}
 
-runpod.serverless.start({"handler": handler})
+if __name__ == "__main__":
+    runpod.serverless.start({"handler": handler})
 
