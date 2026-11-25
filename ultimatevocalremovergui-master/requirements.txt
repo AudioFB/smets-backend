@@ -27,7 +27,7 @@ urllib3
 wget
 samplerate
 diffq
-onnxruntime-gpu==1.18.1
+onnxruntime-gpu==1.22.0
 onnx2pytorch==0.5.1
 SoundFile; sys_platform != 'darwin'
 numpy==1.26.4
