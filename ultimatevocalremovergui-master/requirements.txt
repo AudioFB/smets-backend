@@ -12,7 +12,7 @@ matchering
 ml_collections
 natsort
 omegaconf
-opencv-python
+opencv-python==4.10.0.84
 Pillow
 psutil
 pydub
@@ -22,21 +22,29 @@ PyYAML
 resampy
 scipy
 soundstretch
-torch
+torch==2.8.0
 urllib3
 wget
 samplerate
 diffq
-onnxruntime-gpu
-onnx2pytorch
+onnxruntime-gpu==1.18.1
+onnx2pytorch==0.5.1
 SoundFile; sys_platform != 'darwin'
-numpy
+numpy==1.26.4
 
 # ---- Bibliotecas do Aplicativo e Ambiente ----
 requests
-runpod
+runpod==2.4.0
 ffmpeg-python
 boto3
 
 
 
+
+# Compatibilidade com NumPy 1.26 e PyTorch 2.8
+onnx==1.17.0
+ml-dtypes==0.5.1
+pandas==2.2.3
+scipy==1.13.1
+torchvision==0.23.0
+torchaudio==2.8.0

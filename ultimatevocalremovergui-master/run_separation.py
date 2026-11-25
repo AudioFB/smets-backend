@@ -149,6 +149,10 @@ def execute_separation(args):
         zip_filename_r2 = f"{args.jobId}-mixbusted.zip"
         zip_path_local = os.path.join(work_dir, zip_filename_r2)
         
+        stems = [file for file in os.listdir(output_folder)
+                 if file.lower().endswith(('.wav', '.mp3', '.flac')) and file != args.filename]
+        if not stems:
+            raise RuntimeError("O separador não gerou arquivos de áudio.")
         with zipfile.ZipFile(zip_path_local, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for file in os.listdir(output_folder):
                 if file.lower().endswith(('.wav', '.mp3', '.flac')) and file != args.filename:
@@ -167,17 +171,27 @@ def execute_separation(args):
         
         print(f"Enviando {zip_filename_r2} para o bucket R2: {bucket_name}")
         s3.upload_file(zip_path_local, bucket_name, zip_filename_r2)
-        download_url = f"https://{public_domain}/{zip_filename_r2}"
+        public_base = public_domain.rstrip('/')
+        if not public_base.startswith(('https://', 'http://')):
+            public_base = 'https://' + public_base
+        download_url = f"{public_base}/{zip_filename_r2}"
         print(f"Upload para R2 concluído! URL de download: {download_url}")
         
         finish_url = f'{args.baseUrl}/mixbuster/finish_job.php'
         payload = {'jobId': args.jobId, 'downloadUrl': download_url, 'originalFilename': args.filename}
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-        response = requests.post(finish_url, data=payload, headers=headers)
-        response.raise_for_status()
-        
-        print(f"Notificação de conclusão enviada com SUCESSO para: {finish_url}")
-        return {"status": "success"}
+        # O status do RunPod também carrega o resultado; callback é redundante.
+        try:
+            response = requests.post(finish_url, data=payload, headers=headers, timeout=(15, 30))
+            response.raise_for_status()
+            acknowledgment = response.json()
+            if acknowledgment.get('status') != 'success':
+                raise RuntimeError('Callback não confirmou a gravação do resultado.')
+            print(f"Notificação de conclusão enviada para: {finish_url}")
+        except (requests.RequestException, ValueError, RuntimeError) as exc:
+            print(f"AVISO: callback falhou; resultado disponível via status RunPod: {exc}")
+        return {"status": "success", "downloadUrl": download_url, "filename": args.filename}
+
     except Exception as e:
         traceback.print_exc()
         return {"error": f"Erro no upload/notificação: {e}"}
